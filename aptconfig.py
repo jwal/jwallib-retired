@@ -1,9 +1,10 @@
 # Copyright 2011 James Ascroft-Leigh
 
 """\
-%prog [options]
+%prog [options] [JSON_CONFIG]
 """
 
+import json
 import optparse
 import sys
 
@@ -14,7 +15,7 @@ DEFAULT_CONFIG = {
                 "main",
                 "universe",
                 "restricted",
-                "multiverse",
+                # "multiverse",
             ],
         "prefixes": [
                 "deb",
@@ -24,6 +25,8 @@ DEFAULT_CONFIG = {
                 "",
                 "-security",
                 "-updates",
+                # "-proposed",
+                # "-backports",
             ],
     }
 
@@ -45,9 +48,17 @@ def render_to_sources_list(config):
 def main(argv):
     parser = optparse.OptionParser(__doc__)
     options, args = parser.parse_args(argv)
+    custom_json = json.dumps({})
+    if len(args) > 0:
+        custom_json = args.pop(0)
     if len(args) > 0:
         parser.error("Unexpected: %r" % (args,))
-    print render_to_sources_list(DEFAULT_CONFIG)
+    default_json = json.dumps(DEFAUTT_CONFIG)
+    defaults = json.loads(default_json)
+    custom = json.loads(custom_json)
+    for key, value in defaults.items():
+        custom.setdefault(key, value)
+    print render_to_sources_list(custom)
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))
