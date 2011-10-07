@@ -53,7 +53,7 @@ def main(argv):
         custom_json = args.pop(0)
     if len(args) > 0:
         parser.error("Unexpected: %r" % (args,))
-    default_json = json.dumps(DEFAUTT_CONFIG)
+    default_json = json.dumps(DEFAUT_CONFIG)
     defaults = json.loads(default_json)
     custom = json.loads(custom_json)
     for key, value in defaults.items():
