@@ -37,7 +37,7 @@ def render_to_sources_list(config):
         assert " " not in prefix, repr(prefix)
         for component in config["components"]:
             assert " " not in component, repr(component)
-            for extension in extensions:
+            for extension in config["extensions"]:
                 assert " " not in extension, repr(extension)
                 results.append("%(prefix)s %(mirror)s %(distribution)s %(component)s%(extension)s" % locals())
     return "".join("%s\r\n" % (l,) for l in results)
