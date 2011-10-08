@@ -12,25 +12,38 @@ i.e. your GIT URL will be parsed from something like
 https://github.com/:user/:repo to
 https://api.github.com/repos/:user/:repo .
 
-A special couchdb document called branches is fully mutable and is
+A special couchdb document called git-branches is fully mutable and is
 updated from the list of branches in the git repository.  Each branch
-is then given a different document named after that branch.  Are also
-fully mutable - there is no equivalent to the reflog yet.  No couchdb
-documents are ever deleted.  Other documents are for the commits,
-blobs and trees and, in theory, are immutable.
+is then given a different document named after that branch
+e.g. git-branch-:branch.  These branch document are also fully mutable
+- and there is no equivalent to the reflog yet.  No couchdb documents
+are ever deleted.  Other documents for the commits, blobs and trees
+are, in theory, are immutable.
 
-Objects of type blob, commit and tree are not necessarily copied in a
-particular order.  The dependencies (referenced objects) of these may
-therefore not be present in the target database before the referring
-object is created.  All dependencies are fetched as part of this
-synchronization unless specified using a (as yet unsupported) config
-option.  The objects of type branch and branches are updated once
-their immediately referenced objects are known to be present.
+Objects are copied in dependency order i.e. the presence of an object
+implied that, recursively, the objects it refers to are also present.
+This is an assumption that the synchronizer relies upon in order to do
+incremental copies.
 """
+
+# Implementation note: The replication in dependency order requires a
+# long stack of dependencies to be maintained.  The length of this
+# stack is (according to my intuition) of the order of the length of
+# the commit history multiplied by the average number of files and
+# directories in the repository over time.  If the length of this
+# stack becomes a burden then it can safely be discarded as long as
+# the root element (the list of branches) is retained.  By also
+# retaining the bottom most element you will eventually get everything
+# pulled.
+# 
+# assert MAX_PULL_STACK_LENGTH > 10, MAX_PULL_STACK_LENGTH
+# if len(pull_stack) > MAX_PULL_STACK_LENGTH:
+#     pull_stack[:] = [pull_stack[0]] + [pull_stack[-1]]
 
 from __future__ import with_statement
 
 from cStringIO import StringIO
+from collections import namedtuple
 from hashlib import sha1
 from jwalutil import trim
 from pprint import pformat
@@ -42,11 +55,6 @@ import posixpath
 import pycurl as curl
 import string
 import sys
-
-FUNNY_SHAS = tuple([
-        sha1("blob 0\0").hexdigest(),
-        "0" * 40,
-    ])
 
 def get(url):
     url = url.encode("ascii")
@@ -69,6 +77,8 @@ def is_text(candidate):
         return False
     if any("\n" in a for a in candidate.split("\r\n")):
         return False
+    if not all(len(a) < 80 for a in candidate.split("\r\n")):
+        return False
     return True
 
 def parse_octal_chmod_code(octal_string):
@@ -86,71 +96,181 @@ def parse_octal_chmod_code(octal_string):
         result.append("x" if (part & 0x1) > 0 else "-")
     return "".join(result)
 
-def fetch_all(seeds, git_url, couchdb_url):
-    to_fetch = set(tuple(s) for s in seeds)
-    fetched = set(FUNNY_SHAS)
-    while len(to_fetch) > 0:
-        kind, sha = to_fetch.pop()
-        if sha not in fetched:
-            url = git_url + "/git/" + kind + "s/" + sha
-            data = get(url)
-            if kind == "commit":
-                document = {
-                    "_id": "git-" + kind + "-" + sha,
-                    "type": "git-" + kind,
-                    "sha": sha,
-                    "author": data["author"],
-                    "committer": data["committer"],
-                    "message": data["message"],
-                    "tree": {
-                        "type": "git-tree",
-                        "id_": "git-tree-" + data["tree"]["sha"],
-                        "sha": data["tree"]["sha"],
-                        },
-                    "parents": [],
-                    }
-                for p in sorted(data["parents"], key=lambda x: x["sha"]):
-                    ref = {"type": "git-commit",
-                           "sha": p["sha"],
-                           "_id": "git-commit-" + p["sha"]}
-                    document["parents"].append(ref)
-                    to_fetch.add(("commit", p["sha"]))
-                to_fetch.add(("tree", document["tree"]["sha"]))
-            elif kind == "tree":
-                document = {
-                    "_id": "git-" + kind + "-" + sha,
-                    "type": "git-" + kind,
-                    "sha": sha,
-                    "children": [],
-                    }
-                for c in sorted(data["tree"], key=lambda x: x["sha"]):
-                    ref = {"type": "git-" + c["type"],
-                           "sha": c["sha"],
-                           "_id": "git-" + c["type"] + "-" + c["sha"],
-                           "basename": c["path"],
-                           "mode": parse_octal_chmod_code(c["mode"])}
-                    document["children"].append(ref)
-                    to_fetch.add((c["type"], c["sha"]))
-            elif kind == "blob":
-                document = {
-                    "_id": "git-" + kind + "-" + sha,
-                    "type": "git-" + kind,
-                    "sha": sha,
-                    }
-                if "content" not in data:
-                    raise Exception("Not a blob? %r %r %s"
-                                    % (kind, sha, pformat(data)))
-                blob = base64.b64decode(data["content"])
-                if is_text(blob):
-                    document["encoding"] = "raw"
-                    document["raw"] = blob
-                else:
-                    document["encoding"] = "base64"
-                    document["base64"] = base64.b64encode(blob)
+def resolve_document(git_url, docref):
+    document = docref_to_dict(docref)
+    kind = docref.kind
+    id = docref.id
+    if kind == "branches":
+        source_url = git_url + "/branches"
+    elif kind == "branch":
+        source_url = git_url + "/git/refs/heads/" + docref.name
+    elif kind in ("tree", "commit", "blob"):
+        source_url = git_url + "/git/" + kind + "s/" + docref.name
+    else:
+        raise NotImplementedError(docref)
+    data = get(source_url.encode("ascii"))
+    if kind == "branches":
+        document["branches"] = []
+        for branch in data:
+            document["branches"].append(
+                {"branch": branch["name"],
+                 "type": "git-branch",
+                 "_id": "git-branch-" + branch["name"]})
+    elif kind == "branch":
+        document["commit"] = docref_to_dict(
+            ShaDocRef("commit", data["object"]["sha"]))
+    elif kind == "commit":
+        document.update(
+            {"author": data["author"],
+             "committer": data["committer"],
+             "message": data["message"],
+             "tree": docref_to_dict(ShaDocRef("tree", 
+                                              data["tree"]["sha"])),
+             "parents": [],
+             })
+        for p in sorted(data["parents"], key=lambda x: x["sha"]):
+            document["parents"].append(docref_to_dict(ShaDocRef("commit",
+                                                                p["sha"])))
+    elif kind == "tree":
+        document["children"] = []
+        for c in sorted(data["tree"], key=lambda x: x["sha"]):
+            ref = {"child": docref_to_dict(ShaDocRef(c["type"], c["sha"])),
+                   "basename": c["path"],
+                   "mode": parse_octal_chmod_code(c["mode"])}
+            document["children"].append(ref)
+    elif kind == "blob":
+        if "content" not in data:
+            if docref == ShaDocRef("blob", sha1("blob 0\0").hexdigest()):
+                data = {"content": base64.b64encode("")}
             else:
-                raise NotImplementedError(kind)
-            force_couchdb_put(couchdb_url, document)
-        fetched.add(sha)
+                raise Exception("Not a blob? %r %r %s"
+                                % (kind, sha, pformat(data)))
+        blob = base64.b64decode(data["content"])
+        if is_text(blob):
+            document["encoding"] = "raw"
+            document["raw"] = blob
+        else:
+            document["encoding"] = "base64"
+            document["base64"] = base64.b64encode(blob)
+    else:
+        raise NotImplementedError(kind)
+    return document
+
+DocRef = namedtuple("DocRef", ["id", "kind", "name"])
+
+def BranchDocref(branch):
+    branch = unicode(branch)
+    return DocRef("git-branch-" + branch, "branch", branch)
+
+def ShaDocRef(kind, sha):
+    kind = unicode(kind)
+    sha = unicode(sha)
+    assert kind in ("tree", "blob", "commit"), kind
+    return DocRef("git-" + kind + "-" + sha, kind, sha)
+
+def id_to_docref(id):
+    most = trim(id, prefix="git-")
+    if most == "branches":
+        return BRANCHES_DOCREF
+    kind, name = most.split("-", 1)
+    assert kind in ("branch", "tree", "commit", "blob"), repr(id)
+    return DocRef(id, kind, name)
+
+BRANCHES_DOCREF = DocRef(u"git-branches", u"branches", None)
+
+def docref_to_dict(docref):
+    if docref.kind == "branch":
+        return {"_id": docref.id,
+                "type": "git-" + docref.kind,
+                "branch": docref.name}
+    elif docref.kind == "branches":
+        assert docref.name is None, docref
+        return {"_id": docref.id,
+                "type": "git-" + docref.kind}
+    elif docref.kind in ("tree", "commit", "blob"):
+        return {"_id": docref.id,
+                "type": "git-" + docref.kind,
+                "sha": docref.name}
+    else:
+        raise NotImplementedError(docref)
+
+def dict_to_docref(document):
+    id = document["_id"]
+    kind = trim(document["type"], prefix="git-")
+    if kind == "branches":
+        return BRANCHES_DOCREF
+    elif kind == "branch":
+        return BranchDocref(document["branch"])
+    elif kind in ("tree", "commit", "blob"):
+        return ShaDocRef(trim(document["type"], prefix="git-"), 
+                         document["sha"])
+    else:
+        raise NotImplementedError(document)
+
+def find_dependencies(document):
+    kind = trim(document["type"], prefix="git-")
+    if kind == "branches":
+        for branch in document["branches"]:
+            yield dict_to_docref(branch)
+    elif kind == "branch":
+        yield dict_to_docref(document["commit"])
+    elif kind == "commit":
+        yield dict_to_docref(document["tree"])
+        for parent in document["parents"]:
+            yield dict_to_docref(parent)
+    elif kind == "blob":
+        pass
+    elif kind == "tree":
+        for child in document["children"]:
+            yield dict_to_docref(child["child"])
+    else:
+        raise NotImplementedError(document)
+
+BIG_NUMBER = 100000
+SMALL_NUMBER = 10
+assert BIG_NUMBER > SMALL_NUMBER, (BIG_NUMBER, SMALL_NUMBER)
+assert SMALL_NUMBER > 0, SMALL_NUMBER
+
+MUTABLE_TYPES = ("branches", "branch")
+
+def fetch_all(git_url, couchdb_url, seeds):
+    to_fetch = list(seeds)
+    mutable_buffer = {}
+    local_buffer = {}
+    fetched = set()
+    for match in get(couchdb_url + "/_all_docs")["rows"]:
+        docref = id_to_docref(match["id"])
+        if docref.kind not in MUTABLE_TYPES:
+            fetched.add(docref)
+    while len(to_fetch) > 0:
+        docref = to_fetch.pop(0)
+        if docref not in fetched:
+            document = local_buffer.get(docref)
+            if document is None:
+                document = resolve_document(git_url, docref)
+                local_buffer[docref] = document
+                if docref.kind in ("branches", "branch"):
+                    mutable_buffer[docref] = document
+            dependencies_resolved = True
+            for dependency in find_dependencies(document):
+                if dependency not in fetched:
+                    to_fetch.append(dependency)
+                    dependencies_resolved = False
+            if dependencies_resolved:
+                force_couchdb_put(couchdb_url, document)
+                del local_buffer[docref]
+                fetched.add(docref)
+            else:
+                to_fetch.append(docref)
+        if len(local_buffer) > BIG_NUMBER:
+            local_buffer.clear()
+            local_buffer.update(mutable_buffer)
+        assert BIG_NUMBER > 15
+        if len(to_fetch) > BIG_NUMBER:
+            to_fetch[:] = to_fetch[:SMALL_NUMBER] + list(seeds)
+            if len(to_fetch) > BIG_NUMBER:
+                print "ouch, lots of seeds?"
+            assert len(to_fetch) > 0
 
 def force_couchdb_put_all_or_nothing(couchdb_url, *documents):
     document = {"all_or_nothing": True, "docs": documents}
@@ -162,7 +282,6 @@ def force_couchdb_put_all_or_nothing(couchdb_url, *documents):
         c.setopt(c.POST, True)
         c.setopt(c.POSTFIELDS, input)
         c.setopt(c.HTTPHEADER, ["content-type: application/json"])
-        # c.setopt(c.VERBOSE, True)
         c.perform()
         result = json.loads(out.getvalue())
         assert all(a.get("error") is None for a in result), result
@@ -185,8 +304,10 @@ def force_couchdb_put_with_rev(couchdb_url, *documents):
             if i % 1000 == 0 and i != 0:
                 print i, "The race is on!"
             old_doc = get(doc_url)
-            if old_doc.get("error") == "not_found":
-                if put(doc_url, document).get("error") is None:
+            if (old_doc.get("error") == "not_found" 
+                and old_doc.get("reason") == "missing"):
+                result = put(doc_url, document)
+                if result.get("error") is None:
                     break
             else:
                 assert old_doc.get("error") is None, old_doc
@@ -196,10 +317,10 @@ def force_couchdb_put_with_rev(couchdb_url, *documents):
                 else:
                     d2 = dict(document)
                     d2["_rev"] = rev
-                    if put(doc_url, d2).get("error") is None:
+                    result = put(doc_url, d2)
+                    if result.get("error") is None:
                         break
-            i += 1
-                
+            i += 1                
 
 force_couchdb_put = force_couchdb_put_with_rev
 
@@ -216,24 +337,7 @@ def git_to_couch(git_url, couchdb_url):
                             "type": "git-branch",
                             "_id": "git-branch-" + b["name"]}
                            for b in get(git_url + "/branches")))
-    to_fetch = set()
-    for branch in branches:
-        data = get(git_url + "/git/refs/heads/" + branch["branch"])
-        branch["commit"] = {"_id": "git-object-" + data["object"]["sha"],
-                            "type": "git-commit",
-                            "sha": data["object"]["sha"]}
-        to_fetch.add(("commit", data["object"]["sha"]))
-    fetch_all(to_fetch, git_url, couchdb_url)
-    for branch in branches:
-        force_couchdb_put(couchdb_url, branch)
-    force_couchdb_put(
-        couchdb_url, 
-        {"_id": "git-branches",
-         "type": "git-branches",
-         "branches": [{"branch": b["branch"],
-                       "type": "git-branch",
-                       "_id": b["_id"]} 
-                      for b in branches]})
+    fetch_all(git_url, couchdb_url, [BRANCHES_DOCREF])
 
 def main(argv):
     parser = optparse.OptionParser(__doc__)
