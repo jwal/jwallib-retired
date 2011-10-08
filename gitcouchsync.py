@@ -291,7 +291,7 @@ def fetch_all(git_url, couchdb_url, seeds):
                     next_dependencies = set(d for d in local_dependencies
                                             if d.kind == priority_kind)
                     if len(next_dependencies) > 0:
-                        to_fetch.extend(list(sorted(next_dependencies)))
+                        to_fetch.append(list(sorted(next_dependencies))[0])
                         break
                 else:
                     to_fetch.extend(list(sorted(local_dependencies)))
