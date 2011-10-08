@@ -243,9 +243,9 @@ def find_dependencies(document):
     elif kind == "branch":
         yield dict_to_docref(document["commit"])
     elif kind == "commit":
-        yield dict_to_docref(document["tree"])
         for parent in document["parents"]:
             yield dict_to_docref(parent)
+        yield dict_to_docref(document["tree"])
     elif kind == "blob":
         pass
     elif kind == "tree":
@@ -280,17 +280,21 @@ def fetch_all(git_url, couchdb_url, seeds):
                 local_buffer[docref] = document
                 if docref.kind in ("branches", "branch"):
                     mutable_buffer[docref] = document
-            dependencies_resolved = True
-            for dependency in find_dependencies(document):
-                if dependency not in fetched:
-                    to_fetch.append(dependency)
-                    dependencies_resolved = False
-            if dependencies_resolved:
+            local_dependencies = set(find_dependencies(document)) - fetched
+            if len(local_dependencies) == 0:
                 force_couchdb_put(couchdb_url, document)
                 del local_buffer[docref]
                 fetched.add(docref)
                 print "put", docref
             else:
+                for priority_kind in ["commit", "tree"]:
+                    next_dependencies = set(d for d in local_dependencies
+                                            if d.kind == priority_kind)
+                    if len(next_dependencies) > 0:
+                        to_fetch.extend(list(sorted(next_dependencies)))
+                        break
+                else:
+                    to_fetch.extend(list(sorted(local_dependencies)))
                 to_fetch.append(docref)
         if len(local_buffer) > BIG_NUMBER:
             local_buffer.clear()
