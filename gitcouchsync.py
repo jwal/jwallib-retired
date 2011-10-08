@@ -33,11 +33,13 @@ from __future__ import with_statement
 from cStringIO import StringIO
 from jwalutil import trim
 from pprint import pformat
+import base64
 import contextlib
 import json
 import optparse
 import posixpath
 import pycurl as curl
+import string
 import sys
 
 def get(url):
@@ -48,6 +50,20 @@ def get(url):
         c.setopt(c.WRITEFUNCTION, out.write)
         c.perform()
         return json.loads(out.getvalue())
+
+def is_text(candidate):
+    try:
+        candidate = candidate.encode("ascii")
+    except:
+        return False
+    if not all(a in string.printable for a in candidate):
+        return False
+    not_allowed = "\t\x0b\x0c"
+    if any(a in not_allowed for a in candidate):
+        return False
+    if any("\n" in a for a in candidate.split("\r\n")):
+        return False
+    return True
 
 def parse_octal_chmod_code(octal_string):
     parts = [int(x) for x in octal_string[-3:]]
@@ -96,14 +112,28 @@ def fetch_all(seeds, git_url, couchdb_url):
                     "_id": "git-" + kind + "-" + sha,
                     "type": "git-" + kind,
                     "sha": sha,
-                    "children": [
-                        {"type": "git-" + c["type"],
-                         "sha": c["sha"],
-                         "_id": "git-" + c["type"] + "-" + c["sha"],
-                         "mode": parse_octal_chmod_code(c["mode"])}
-                        for c in sorted(data["tree"], key=lambda x: x["sha"])
-                        ]
+                    "children": [],
                     }
+                for c in sorted(data["tree"], key=lambda x: x["sha"]):
+                    ref = {"type": "git-" + c["type"],
+                           "sha": c["sha"],
+                           "_id": "git-" + c["type"] + "-" + c["sha"],
+                           "mode": parse_octal_chmod_code(c["mode"])}
+                    document["children"].append(ref)
+                    to_fetch.add((c["type"], c["sha"]))
+            elif kind == "blob":
+                document = {
+                    "_id": "git-" + kind + "-" + sha,
+                    "type": "git-" + kind,
+                    "sha": sha,
+                    }
+                blob = base64.b64decode(data["content"])
+                if is_text(blob):
+                    document["encoding"] = "raw"
+                    document["raw"] = blob
+                else:
+                    document["encoding"] = "base64"
+                    document["base64"] = base64.b64encode(blob)
             else:
                 raise NotImplementedError(kind)
             force_couchdb_put(couchdb_url, document)
@@ -123,7 +153,6 @@ def force_couchdb_put_all_or_nothing(couchdb_url, *documents):
         c.perform()
         result = json.loads(out.getvalue())
         assert all(a.get("error") is None for a in result), result
-
 
 def put(url, document):
     with contextlib.closing(curl.Curl()) as c:
