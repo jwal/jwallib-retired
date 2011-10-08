@@ -31,6 +31,7 @@ their immediately referenced objects are known to be present.
 from __future__ import with_statement
 
 from cStringIO import StringIO
+from hashlib import sha1
 from jwalutil import trim
 from pprint import pformat
 import base64
@@ -41,6 +42,11 @@ import posixpath
 import pycurl as curl
 import string
 import sys
+
+FUNNY_SHAS = tuple([
+        sha1("blob 0\0").hexdigest(),
+        "0" * 40,
+    ])
 
 def get(url):
     url = url.encode("ascii")
@@ -66,25 +72,28 @@ def is_text(candidate):
     return True
 
 def parse_octal_chmod_code(octal_string):
-    parts = [int(x) for x in octal_string[-3:]]
     result = []
-    result.append("-")
+    if octal_string[:-3] == "040":
+        result.append("d")
+    elif octal_string[:-3] == "100":
+        result.append("-")
+    else:
+        raise NotImplementedError(octal_string)
+    parts = [int(x) for x in octal_string[-3:]]
     for part in parts:
         result.append("r" if (part & 0x4) > 0 else "-")
         result.append("w" if (part & 0x2) > 0 else "-")
         result.append("x" if (part & 0x1) > 0 else "-")
-    assert octal_string[:-3] == "100", NotImplemented
     return "".join(result)
 
 def fetch_all(seeds, git_url, couchdb_url):
     to_fetch = set(tuple(s) for s in seeds)
-    fetched = set()
+    fetched = set(FUNNY_SHAS)
     while len(to_fetch) > 0:
         kind, sha = to_fetch.pop()
         if sha not in fetched:
             url = git_url + "/git/" + kind + "s/" + sha
             data = get(url)
-            print pformat(data)
             if kind == "commit":
                 document = {
                     "_id": "git-" + kind + "-" + sha,
@@ -118,6 +127,7 @@ def fetch_all(seeds, git_url, couchdb_url):
                     ref = {"type": "git-" + c["type"],
                            "sha": c["sha"],
                            "_id": "git-" + c["type"] + "-" + c["sha"],
+                           "basename": c["path"],
                            "mode": parse_octal_chmod_code(c["mode"])}
                     document["children"].append(ref)
                     to_fetch.add((c["type"], c["sha"]))
@@ -127,6 +137,9 @@ def fetch_all(seeds, git_url, couchdb_url):
                     "type": "git-" + kind,
                     "sha": sha,
                     }
+                if "content" not in data:
+                    raise Exception("Not a blob? %r %r %s"
+                                    % (kind, sha, pformat(data)))
                 blob = base64.b64decode(data["content"])
                 if is_text(blob):
                     document["encoding"] = "raw"
