@@ -263,6 +263,20 @@ MUTABLE_TYPES = ("branches", "branch")
 
 def fetch_all(git_url, couchdb_url, seeds):
     to_fetch = list(seeds)
+    push = lambda x: to_fetch.append(x)
+    pop = lambda: to_fetch.pop()
+    def priority_sort_key(docref):
+        priority_items = ["commit", "tree"]
+        i = dict((a, idx) for (idx, a) in enumerate(priority_items)).get(
+            docref.kind, len(priority_items))
+        return (i, docref.name, docref)
+    def multipush(many, limit=None):
+        for i, item in enumerate(reversed(
+                sorted(many, key=priority_sort_key))):
+            if limit is not None and i > limit:
+                break
+            push(item)
+    multipush(seeds)
     mutable_buffer = {}
     local_buffer = {}
     fetched = set()
@@ -271,7 +285,7 @@ def fetch_all(git_url, couchdb_url, seeds):
         if docref.kind not in MUTABLE_TYPES:
             fetched.add(docref)
     while len(to_fetch) > 0:
-        docref = to_fetch.pop(0)
+        docref = pop()
         if docref not in fetched:
             document = local_buffer.get(docref)
             if document is None:
@@ -287,21 +301,17 @@ def fetch_all(git_url, couchdb_url, seeds):
                 fetched.add(docref)
                 print "put", docref
             else:
-                for priority_kind in ["commit", "tree"]:
-                    next_dependencies = set(d for d in local_dependencies
-                                            if d.kind == priority_kind)
-                    if len(next_dependencies) > 0:
-                        to_fetch.append(list(sorted(next_dependencies))[0])
-                        break
-                else:
-                    to_fetch.extend(list(sorted(local_dependencies)))
-                to_fetch.append(docref)
+                push(docref)
+                multipush(local_dependencies)
         if len(local_buffer) > BIG_NUMBER:
             local_buffer.clear()
             local_buffer.update(mutable_buffer)
         assert BIG_NUMBER > 15
         if len(to_fetch) > BIG_NUMBER:
-            to_fetch[:] = to_fetch[:SMALL_NUMBER] + list(seeds)
+            to_keep = to_fetch[:-SMALL_NUMBER]
+            to_fetch[:] =  []
+            multipush(seeds)
+            multipush(to_keep)
             if len(to_fetch) > BIG_NUMBER:
                 print "ouch, lots of seeds?"
             assert len(to_fetch) > 0
