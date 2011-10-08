@@ -55,6 +55,7 @@ import posixpath
 import pycurl as curl
 import string
 import sys
+import time
 
 def get(url):
     url = url.encode("ascii")
