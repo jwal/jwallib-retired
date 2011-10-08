@@ -297,8 +297,7 @@ def fetch_all(git_url, couchdb_url, seeds):
             local_buffer.update(mutable_buffer)
         assert BIG_NUMBER > 15
         if len(to_fetch) > BIG_NUMBER:
-            to_fetch[:] = to_fetch[:SMALL_NUMBER] + list(
-                s for s in seeds if s not in to_fetch[:SMALL_NUMBER])
+            to_fetch[:] = to_fetch[:SMALL_NUMBER] + list(seeds)
             if len(to_fetch) > BIG_NUMBER:
                 print "ouch, lots of seeds?"
             assert len(to_fetch) > 0
