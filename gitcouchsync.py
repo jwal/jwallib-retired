@@ -14,10 +14,18 @@ https://api.github.com/repos/:user/:repo .
 
 A special couchdb document called branches is fully mutable and is
 updated from the list of branches in the git repository.  Each branch
-is then given a different document named after that branch.  These
-documents are (or should be, assuming no rebasing) append-only objects
-that are equivalent to a reflog.  No couchdb documents are ever
-deleted.
+is then given a different document named after that branch.  Are also
+fully mutable - there is no equivalent to the reflog yet.  No couchdb
+documents are ever deleted.  Other documents are for the commits,
+blobs and trees and, in theory, are immutable.
+
+Objects of type blob, commit and tree are not necessarily copied in a
+particular order.  The dependencies (referenced objects) of these may
+therefore not be present in the target database before the referring
+object is created.  All dependencies are fetched as part of this
+synchronization unless specified using a (as yet unsupported) config
+option.  The objects of type branch and branches are updated once
+their immediately referenced objects are known to be present.
 """
 
 from __future__ import with_statement
@@ -28,6 +36,7 @@ from pprint import pformat
 import contextlib
 import json
 import optparse
+import posixpath
 import pycurl as curl
 import sys
 
@@ -40,7 +49,67 @@ def get(url):
         c.perform()
         return json.loads(out.getvalue())
 
-def force_couchdb_put(couchdb_url, *documents):
+def parse_octal_chmod_code(octal_string):
+    parts = [int(x) for x in octal_string[-3:]]
+    result = []
+    result.append("-")
+    for part in parts:
+        result.append("r" if (part & 0x4) > 0 else "-")
+        result.append("w" if (part & 0x2) > 0 else "-")
+        result.append("x" if (part & 0x1) > 0 else "-")
+    assert octal_string[:-3] == "100", NotImplemented
+    return "".join(result)
+
+def fetch_all(seeds, git_url, couchdb_url):
+    to_fetch = set(tuple(s) for s in seeds)
+    fetched = set()
+    while len(to_fetch) > 0:
+        kind, sha = to_fetch.pop()
+        if sha not in fetched:
+            url = git_url + "/git/" + kind + "s/" + sha
+            data = get(url)
+            print pformat(data)
+            if kind == "commit":
+                document = {
+                    "_id": "git-" + kind + "-" + sha,
+                    "type": "git-" + kind,
+                    "sha": sha,
+                    "author": data["author"],
+                    "committer": data["committer"],
+                    "message": data["message"],
+                    "tree": {
+                        "type": "git-tree",
+                        "id_": "git-tree-" + data["tree"]["sha"],
+                        "sha": data["tree"]["sha"],
+                        },
+                    "parents": [],
+                    }
+                for p in sorted(data["parents"], key=lambda x: x["sha"]):
+                    ref = {"type": "git-commit",
+                           "sha": p["sha"],
+                           "_id": "git-commit-" + p["sha"]}
+                    document["parents"].append(ref)
+                    to_fetch.add(("commit", p["sha"]))
+                to_fetch.add(("tree", document["tree"]["sha"]))
+            elif kind == "tree":
+                document = {
+                    "_id": "git-" + kind + "-" + sha,
+                    "type": "git-" + kind,
+                    "sha": sha,
+                    "children": [
+                        {"type": "git-" + c["type"],
+                         "sha": c["sha"],
+                         "_id": "git-" + c["type"] + "-" + c["sha"],
+                         "mode": parse_octal_chmod_code(c["mode"])}
+                        for c in sorted(data["tree"], key=lambda x: x["sha"])
+                        ]
+                    }
+            else:
+                raise NotImplementedError(kind)
+            force_couchdb_put(couchdb_url, document)
+        fetched.add(sha)
+
+def force_couchdb_put_all_or_nothing(couchdb_url, *documents):
     document = {"all_or_nothing": True, "docs": documents}
     with contextlib.closing(curl.Curl()) as c:
         c.setopt(c.URL, couchdb_url + "/_bulk_docs")
@@ -55,6 +124,43 @@ def force_couchdb_put(couchdb_url, *documents):
         result = json.loads(out.getvalue())
         assert all(a.get("error") is None for a in result), result
 
+
+def put(url, document):
+    with contextlib.closing(curl.Curl()) as c:
+        c.setopt(c.URL, url)
+        out = StringIO()
+        c.setopt(c.WRITEFUNCTION, out.write)
+        c.setopt(c.UPLOAD, True)
+        c.setopt(c.READFUNCTION, StringIO(json.dumps(document)).read)
+        c.perform()
+        return json.loads(out.getvalue())
+
+def force_couchdb_put_with_rev(couchdb_url, *documents):
+    for document in documents:
+        doc_url = posixpath.join(couchdb_url, document["_id"]).encode("ascii")
+        i = 0
+        while True:
+            if i % 1000 == 0 and i != 0:
+                print i, "The race is on!"
+            old_doc = get(doc_url)
+            if old_doc.get("error") == "not_found":
+                if put(doc_url, document).get("error") is None:
+                    break
+            else:
+                assert old_doc.get("error") is None, old_doc
+                rev = old_doc.pop("_rev")
+                if document == old_doc:
+                    break
+                else:
+                    d2 = dict(document)
+                    d2["_rev"] = rev
+                    if put(doc_url, d2).get("error") is None:
+                        break
+            i += 1
+                
+
+force_couchdb_put = force_couchdb_put_with_rev
+
 def git_to_couch(git_url, couchdb_url):
     github_prefix = "https://github.com/"
     github_api_prefix = "https://api.github.com/repos/"
@@ -68,17 +174,22 @@ def git_to_couch(git_url, couchdb_url):
                             "type": "git-branch",
                             "_id": "git-branch-" + b["name"]}
                            for b in get(git_url + "/branches")))
+    to_fetch = set()
     for branch in branches:
         data = get(git_url + "/git/refs/heads/" + branch["branch"])
         branch["commit"] = {"_id": "git-object-" + data["object"]["sha"],
                             "type": "git-commit",
                             "sha": data["object"]["sha"]}
+        to_fetch.add(("commit", data["object"]["sha"]))
+    fetch_all(to_fetch, git_url, couchdb_url)
+    for branch in branches:
         force_couchdb_put(couchdb_url, branch)
     force_couchdb_put(
         couchdb_url, 
         {"_id": "git-branches",
-         "type": "git-branch-list",
+         "type": "git-branches",
          "branches": [{"branch": b["branch"],
+                       "type": "git-branch",
                        "_id": b["_id"]} 
                       for b in branches]})
 
