@@ -255,7 +255,7 @@ def find_dependencies(document):
         raise NotImplementedError(document)
 
 BIG_NUMBER = 100000
-SMALL_NUMBER = 10
+SMALL_NUMBER = BIG_NUMBER // 2
 assert BIG_NUMBER > SMALL_NUMBER, (BIG_NUMBER, SMALL_NUMBER)
 assert SMALL_NUMBER > 0, SMALL_NUMBER
 
@@ -289,7 +289,7 @@ def fetch_all(git_url, couchdb_url, seeds):
         if docref not in fetched:
             document = local_buffer.get(docref)
             if document is None:
-                print "get", docref
+                print "get", len(to_fetch), docref
                 document = resolve_document(git_url, docref)
                 local_buffer[docref] = document
                 if docref.kind in ("branches", "branch"):
@@ -299,7 +299,7 @@ def fetch_all(git_url, couchdb_url, seeds):
                 force_couchdb_put(couchdb_url, document)
                 del local_buffer[docref]
                 fetched.add(docref)
-                print "put", docref
+                print "put", len(to_fetch), docref
             else:
                 push(docref)
                 multipush(local_dependencies)
