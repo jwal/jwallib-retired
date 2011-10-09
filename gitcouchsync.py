@@ -44,13 +44,16 @@ from __future__ import with_statement
 
 from cStringIO import StringIO
 from collections import namedtuple
+from encoding import encode_as_c_identifier
 from hashlib import sha1
-from jwalutil import trim
+from jwalutil import trim, read_lines, get1
 from pprint import pformat
+from process import call
 import base64
 import contextlib
 import json
 import optparse
+import os
 import posixpath
 import pycurl as curl
 import string
@@ -124,7 +127,7 @@ def symbolic_to_octal_mode(symbolic_string, check_reversible=True):
                                                result)
     return result
 
-def resolve_document(git_url, docref):
+def resolve_document_from_github(git_url, docref):
     document = docref_to_dict(docref)
     kind = docref.kind
     id = docref.id
@@ -184,6 +187,80 @@ def resolve_document(git_url, docref):
         raise NotImplementedError(kind)
     return document
 
+def git_show(git, sha, attr):
+    start = "#start#"
+    end = "#end#"
+    out = call(git + ["show", "--format=format:%s%s%s" % (start, attr, end),
+                      "--quiet", sha], do_check=False)
+    sindex = out.index(start) + len(start)
+    eindex = out.rindex(end)
+    assert sindex <= eindex, out
+    return out[sindex:eindex]
+
+def resolve_document_using_git(git, docref):
+    document = docref_to_dict(docref)
+    kind = docref.kind
+    id = docref.id
+    get = lambda f, n=docref.name: call(
+        git + ["show", "--quiet", "--format=format:%s" % (f,), n],
+        do_check=False)
+    get = lambda a: git_show(git, docref.name, a)
+    if kind == "branches":
+        branches = [trim(a, prefix="  remotes/origin/")
+                    for a in read_lines(call(git + ["branch", "-a"]))]
+        document["branches"] = []
+        for branch in branches:
+            document["branches"].append(docref_to_dict(BranchDocref(branch)))
+    elif kind == "branch":
+        sha = get1(
+            read_lines(
+                call(git + ["rev-parse", "remotes/origin/" + docref.name])))
+        document["commit"] = docref_to_dict(ShaDocRef("commit", sha))
+    elif kind == "commit":
+        document.update(
+            {"author": {"name": get("%an"),
+                        "email": get("%ae"),
+                        "date": get("%ai")},
+             "committer": {"name": get("%cn"),
+                           "email": get("%ce"),
+                           "date": get("%ci")},
+             "message": get("%B"),
+             "tree": docref_to_dict(ShaDocRef("tree", get("%T"))),
+             "parents": [],
+             })
+        for p in sorted(get("%P").split(" ")):
+            if p == "":
+                continue
+            document["parents"].append(docref_to_dict(ShaDocRef("commit",
+                                                                p)))
+    elif kind == "tree":
+        document["children"] = []
+        for line in read_lines(call(git + ["ls-tree", docref.name])):
+            child_mode, child_kind, rest = line.split(" ", 2)
+            child_sha, child_basename = rest.split("\t", 1)
+            ref = {"child": docref_to_dict(ShaDocRef(child_kind, child_sha)),
+                   "basename": child_basename,
+                   "mode": octal_to_symbolic_mode(child_mode)}
+            document["children"].append(ref)
+        document["children"].sort(key=lambda a: a["child"]["sha"])
+    elif kind == "blob":
+        blob = call(git + ["show", docref.name], do_crlf_fix=False)
+        # if "content" not in data:
+        #     if docref == ShaDocRef("blob", sha1("blob 0\0").hexdigest()):
+        #         data = {"content": base64.b64encode("")}
+        #     else:
+        #         raise Exception("Not a blob? %r %r %s"
+        #                         % (kind, sha, pformat(data)))
+        if is_text(blob):
+            document["encoding"] = "raw"
+            document["raw"] = blob
+        else:
+            document["encoding"] = "base64"
+            document["base64"] = base64.b64encode(blob)
+    else:
+        raise NotImplementedError(kind)
+    return document
+
 DocRef = namedtuple("DocRef", ["id", "kind", "name"])
 
 def BranchDocref(branch):
@@ -194,6 +271,7 @@ def ShaDocRef(kind, sha):
     kind = unicode(kind)
     sha = unicode(sha)
     assert kind in ("tree", "blob", "commit"), kind
+    assert len(sha) == len(sha1().hexdigest()), repr(sha)
     return DocRef("git-" + kind + "-" + sha, kind, sha)
 
 def id_to_docref(id):
@@ -261,7 +339,8 @@ assert SMALL_NUMBER > 0, SMALL_NUMBER
 
 MUTABLE_TYPES = ("branches", "branch")
 
-def fetch_all(git_url, couchdb_url, seeds):
+def fetch_all(resolve_document, couchdb_url, seeds):
+    # seeds = [id_to_docref("git-commit-c6a8681c65a631beb4c0881c76b41a240d32ed4f")] # debug
     to_fetch = list(seeds)
     push = lambda x: to_fetch.append(x)
     pop = lambda: to_fetch.pop()
@@ -290,7 +369,7 @@ def fetch_all(git_url, couchdb_url, seeds):
             document = local_buffer.get(docref)
             if document is None:
                 print "get", len(to_fetch), docref
-                document = resolve_document(git_url, docref)
+                document = resolve_document(docref)
                 local_buffer[docref] = document
                 if docref.kind in ("branches", "branch"):
                     mutable_buffer[docref] = document
@@ -368,7 +447,7 @@ def force_couchdb_put_with_rev(couchdb_url, *documents):
 
 force_couchdb_put = force_couchdb_put_with_rev
 
-def git_to_couch(git_url, couchdb_url):
+def git_to_couchdb_from_github(git_url, couchdb_url):
     github_prefix = "https://github.com/"
     github_api_prefix = "https://api.github.com/repos/"
     if not git_url.startswith(github_prefix):
@@ -377,11 +456,23 @@ def git_to_couch(git_url, couchdb_url):
                                   "GIT_URL like %s:user/:repo ."
                                   % (github_prefix,))
     git_url = github_api_prefix + trim(git_url, prefix=github_prefix)
-    branches = list(sorted({"branch": b["name"],
-                            "type": "git-branch",
-                            "_id": "git-branch-" + b["name"]}
-                           for b in get(git_url + "/branches")))
-    fetch_all(git_url, couchdb_url, [BRANCHES_DOCREF])
+    resolve_document = lambda d: resolve_document_from_github(git_url, d)
+    fetch_all(resolve_document, couchdb_url, [BRANCHES_DOCREF])
+
+def git_to_couchdb_using_git(cache_root, git_url, couchdb_url):
+    cache_dir = os.path.join(cache_root, encode_as_c_identifier(git_url))
+    git = ["bash", "-c", 'cd "$1" && shift && exec "$@"', "-", cache_dir, 
+           "git"]
+    call(["mkdir", "-p", cache_dir])
+    call(git + ["init"])
+    for r in read_lines(call(git + ["remote"])):
+        call(git + ["remote", "rm", r])
+    call(git + ["remote", "add", "origin", git_url])
+    call(git + ["fetch", "origin"], stdout=None, stderr=None)
+    resolve_document = lambda d: resolve_document_using_git(git, d)
+    fetch_all(resolve_document, couchdb_url, [BRANCHES_DOCREF])
+
+git_to_couchdb = git_to_couchdb_using_git
 
 def main(argv):
     parser = optparse.OptionParser(__doc__)
@@ -392,6 +483,7 @@ def main(argv):
     parser.add_option("--poll-interval", dest="poll_interval",
                       type=int, default=60*60, 
                       help="unit: seconds, default: hourly")
+    parser.add_option("--cache-root", dest="cache_root") 
     options, args = parser.parse_args(argv)
     if len(args) == 0:
         parser.error("Missing: GIT_URL")
@@ -401,11 +493,15 @@ def main(argv):
     couchdb_url = args.pop(0)
     if len(args) > 0:
         parser.error("Unexpected: %r" % (args,))
+    cache_root = options.cache_root
+    if cache_root is None:
+        cache_root = "/tmp/gitcouchsynccache"
+    cache_root = os.path.abspath(cache_root)
     if options.mode == "once":
-        git_to_couch(git_url, couchdb_url)
+        git_to_couchdb(cache_root, git_url, couchdb_url)
     elif options.mode == "poll":
         while True:
-            git_to_couch(git_url, couchdb_url)
+            git_to_couchdb(cache_root, git_url, couchdb_url)
             time.sleep(options.poll_interval)
 
 if __name__ == "__main__":
