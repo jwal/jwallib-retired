@@ -6,12 +6,6 @@
 I copy objects from GIT_URL and put them into COUCHDB_URL.  I cannot
 copy them in the other direction yet.
 
-At the moment, I rely on using the GitHub (JSON) API to Git
-repositories as documented on http://developer.github.com/v3/.
-i.e. your GIT URL will be parsed from something like
-https://github.com/:user/:repo to
-https://api.github.com/repos/:user/:repo .
-
 A special couchdb document called git-branches is fully mutable and is
 updated from the list of branches in the git repository.  Each branch
 is then given a different document named after that branch
