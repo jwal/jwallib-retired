@@ -121,66 +121,6 @@ def symbolic_to_octal_mode(symbolic_string, check_reversible=True):
                                                result)
     return result
 
-def resolve_document_from_github(git_url, docref):
-    document = docref_to_dict(docref)
-    kind = docref.kind
-    id = docref.id
-    if kind == "branches":
-        source_url = git_url + "/branches"
-    elif kind == "branch":
-        source_url = git_url + "/git/refs/heads/" + docref.name
-    elif kind in ("tree", "commit", "blob"):
-        source_url = git_url + "/git/" + kind + "s/" + docref.name
-    else:
-        raise NotImplementedError(docref)
-    data = get(source_url.encode("ascii"))
-    if kind == "branches":
-        document["branches"] = []
-        for branch in data:
-            document["branches"].append(
-                {"branch": branch["name"],
-                 "type": "git-branch",
-                 "_id": "git-branch-" + branch["name"]})
-    elif kind == "branch":
-        document["commit"] = docref_to_dict(
-            ShaDocRef("commit", data["object"]["sha"]))
-    elif kind == "commit":
-        document.update(
-            {"author": data["author"],
-             "committer": data["committer"],
-             "message": data["message"],
-             "tree": docref_to_dict(ShaDocRef("tree", 
-                                              data["tree"]["sha"])),
-             "parents": [],
-             })
-        for p in sorted(data["parents"], key=lambda x: x["sha"]):
-            document["parents"].append(docref_to_dict(ShaDocRef("commit",
-                                                                p["sha"])))
-    elif kind == "tree":
-        document["children"] = []
-        for c in sorted(data["tree"], key=lambda x: x["sha"]):
-            ref = {"child": docref_to_dict(ShaDocRef(c["type"], c["sha"])),
-                   "basename": c["path"],
-                   "mode": octal_to_symbolic_mode(c["mode"])}
-            document["children"].append(ref)
-    elif kind == "blob":
-        if "content" not in data:
-            if docref == ShaDocRef("blob", sha1("blob 0\0").hexdigest()):
-                data = {"content": base64.b64encode("")}
-            else:
-                raise Exception("Not a blob? %r %r %s"
-                                % (kind, sha, pformat(data)))
-        blob = base64.b64decode(data["content"])
-        if is_text(blob):
-            document["encoding"] = "raw"
-            document["raw"] = blob
-        else:
-            document["encoding"] = "base64"
-            document["base64"] = base64.b64encode(blob)
-    else:
-        raise NotImplementedError(kind)
-    return document
-
 def git_show(git, sha, attr):
     start = "#start#"
     end = "#end#"
@@ -225,8 +165,8 @@ def resolve_document_using_git(git, docref):
         for p in sorted(get("%P").split(" ")):
             if p == "":
                 continue
-            document["parents"].append(docref_to_dict(ShaDocRef("commit",
-                                                                p)))
+            document["parents"].append(
+                docref_to_dict(ShaDocRef("commit", p)))
     elif kind == "tree":
         document["children"] = []
         for line in read_lines(call(git + ["ls-tree", docref.name])):
@@ -239,12 +179,6 @@ def resolve_document_using_git(git, docref):
         document["children"].sort(key=lambda a: a["child"]["sha"])
     elif kind == "blob":
         blob = call(git + ["show", docref.name], do_crlf_fix=False)
-        # if "content" not in data:
-        #     if docref == ShaDocRef("blob", sha1("blob 0\0").hexdigest()):
-        #         data = {"content": base64.b64encode("")}
-        #     else:
-        #         raise Exception("Not a blob? %r %r %s"
-        #                         % (kind, sha, pformat(data)))
         if is_text(blob):
             document["encoding"] = "raw"
             document["raw"] = blob
@@ -334,7 +268,6 @@ assert SMALL_NUMBER > 0, SMALL_NUMBER
 MUTABLE_TYPES = ("branches", "branch")
 
 def fetch_all(resolve_document, couchdb_url, seeds):
-    # seeds = [id_to_docref("git-commit-c6a8681c65a631beb4c0881c76b41a240d32ed4f")] # debug
     to_fetch = list(seeds)
     push = lambda x: to_fetch.append(x)
     pop = lambda: to_fetch.pop()
@@ -440,18 +373,6 @@ def force_couchdb_put_with_rev(couchdb_url, *documents):
             i += 1                
 
 force_couchdb_put = force_couchdb_put_with_rev
-
-def git_to_couchdb_from_github(git_url, couchdb_url):
-    github_prefix = "https://github.com/"
-    github_api_prefix = "https://api.github.com/repos/"
-    if not git_url.startswith(github_prefix):
-        raise NotImplementedError("Sorry, I currently rely on github to "
-                                  "convert GIT objects into JSON.  Try a "
-                                  "GIT_URL like %s:user/:repo ."
-                                  % (github_prefix,))
-    git_url = github_api_prefix + trim(git_url, prefix=github_prefix)
-    resolve_document = lambda d: resolve_document_from_github(git_url, d)
-    fetch_all(resolve_document, couchdb_url, [BRANCHES_DOCREF])
 
 def git_to_couchdb_using_git(cache_root, git_url, couchdb_url):
     cache_dir = os.path.join(cache_root, encode_as_c_identifier(git_url))
