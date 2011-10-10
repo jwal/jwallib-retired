@@ -1,26 +1,44 @@
 # Copyright 2011 James Ascroft-Leigh
 
+import string
+
 try:
     from cStringIO import StringIO
 except Exception:
     from StringIO import StringIO
 
-def trim(string, prefix="", suffix=""):
-    assert string.startswith(prefix), (string, prefix)
-    assert string.endswith(suffix), (string, suffix)
-    assert len(string) >= len(prefix) + len(suffix), (string, prefix, suffix)
-    return string[len(prefix):len(string)-len(suffix)]
+def trim(text, prefix="", suffix=""):
+    assert text.startswith(prefix), (text, prefix)
+    assert text.endswith(suffix), (text, suffix)
+    assert len(text) >= len(prefix) + len(suffix), (text, prefix, suffix)
+    return text[len(prefix):len(text)-len(suffix)]
 
 def get1(items):
     items = list(items)
     assert len(items) == 1, items
     return items[0]
 
-def read_lines(data):
-    if data == "":
-        return []
-    return list(trim(a, suffix="\r\n") for a in StringIO(data)
-                if a != "")
+def read_lines(data, line_terminator="\r\n"):
+    # For well behaved data that comes from a command line program.
+    # Each line - even the last - should really have a \r\n
+    # terminator.  Absence of any terminator indicates no lines at
+    # all.  The unix utility "ls" bahaves like this, for example.
+    # Note, though, that sometimes a different line terminator is
+    # used.
+    result = []
+    i = 0
+    while True:
+        index = data.find(line_terminator, i)
+        if index >= 0:
+            result.append(data[i:index])
+            i = index + len(line_terminator)
+        else:
+            assert index == -1, index
+            if i < len(data) - 1:
+                raise Exception("Trailing garbage %r in %r" % (data[i:], data))
+        if i == len(data):
+            break
+    return result
 
 def is_text(candidate):
     try:
