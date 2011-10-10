@@ -1,3 +1,4 @@
+# Copyright 2011 James Ascroft-Leigh
 
 from cStringIO import StringIO
 from jwalutil import trim

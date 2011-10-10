@@ -1,3 +1,4 @@
+# Copyright 2011 James Ascroft-Leigh
 
 import base64
 import string

@@ -1,3 +1,4 @@
+# Copyright 2011 James Ascroft-Leigh
 
 try:
     from cStringIO import StringIO
