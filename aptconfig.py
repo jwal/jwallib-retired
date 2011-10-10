@@ -74,7 +74,7 @@ def main(argv):
     parser.add_option("--skip-blank-sources-list-install", dest="do_blank",
                       default=True, action="store_false")
     parser.add_option("--proxy", dest="proxy", 
-                      default="http://ubuntu.devel.cmedltd.com:3128/")
+                      default="http://ubuntu.devel.cmedltd.com:3142/")
     parser.add_option("--no-proxy", dest="proxy", action="store_const",
                       const=None)
     parser.add_option("--proxy-basename", dest="proxy_basename",
@@ -106,7 +106,7 @@ def main(argv):
                 proxy_data = "# No proxy\r\n"
             else:
                 assert '"' not in options.proxy, repr(options.proxy)
-                proxy_data = ('Acquire::HTTP::Proxy::"%s";\r\n'
+                proxy_data = ('Acquire::HTTP { Proxy::"%s"; }\r\n'
                               % (options.proxy,))
             assert ("\0" not in options.proxy_basename 
                     and "/" not in options.proxy_basename), \
