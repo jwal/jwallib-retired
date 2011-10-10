@@ -1,38 +1,11 @@
 # Copyright 2011 James Ascroft-Leigh
 
 """\
-%prog [options] GIT_URL COUCHDB_URL
+%prog [options] COUCHDB_URL GIT_URL
 
-I copy objects from GIT_URL and put them into COUCHDB_URL.  To copy
-objects in the other direction try couchdbgitsync.py.
-
-A special couchdb document called git-branches is fully mutable and is
-updated from the list of branches in the git repository.  Each branch
-is then given a different document named after that branch
-e.g. git-branch-:branch.  These branch document are also fully mutable
-- and there is no equivalent to the reflog yet.  No couchdb documents
-are ever deleted.  Other documents for the commits, blobs and trees
-are, in theory, are immutable.
-
-Objects are copied in dependency order i.e. the presence of an object
-implied that, recursively, the objects it refers to are also present.
-This is an assumption that the synchronizer relies upon in order to do
-incremental copies.
+I copy objects from COUCHDB_URL and put them into GIT_URL.  To copy
+objects in the other direction, try gitcouchdbsync.py.
 """
-
-# Implementation note: The replication in dependency order requires a
-# long stack of dependencies to be maintained.  The length of this
-# stack is (according to my intuition) of the order of the length of
-# the commit history multiplied by the average number of files and
-# directories in the repository over time.  If the length of this
-# stack becomes a burden then it can safely be discarded as long as
-# the root element (the list of branches) is retained.  By also
-# retaining the bottom most element you will eventually get everything
-# pulled.
-# 
-# assert MAX_PULL_STACK_LENGTH > 10, MAX_PULL_STACK_LENGTH
-# if len(pull_stack) > MAX_PULL_STACK_LENGTH:
-#     pull_stack[:] = [pull_stack[0]] + [pull_stack[-1]]
 
 from __future__ import with_statement
 
@@ -41,10 +14,10 @@ from collections import namedtuple
 from encoding import encode_as_c_identifier
 from hashlib import sha1
 from jwalutil import trim, read_lines, get1, is_text
+from posixutils import octal_to_symbolic_mode, symbolic_to_octal_mode
 from pprint import pformat
 from process import call
 from couchdblib import get
-from posixutils import octal_to_symbolic_mode, symbolic_to_octal_mode
 import base64
 import contextlib
 import json
@@ -55,12 +28,6 @@ import pycurl as curl
 import string
 import sys
 import time
-
-SYMBOLIC_TYPES = (
-    ("directory", "d", "040"),
-    ("regular file", "-", "100"),
-    ("symbolic link", "l", "120"),
-    )
 
 def git_show(git, sha, attr):
     start = "#start#"

@@ -21,3 +21,20 @@ def read_lines(data):
         return []
     return list(trim(a, suffix="\r\n") for a in StringIO(data)
                 if a != "")
+
+def is_text(candidate):
+    try:
+        candidate = candidate.encode("ascii")
+    except:
+        return False
+    if not all(a in string.printable for a in candidate):
+        return False
+    not_allowed = "\t\x0b\x0c"
+    if any(a in not_allowed for a in candidate):
+        return False
+    if any("\n" in a for a in candidate.split("\r\n")):
+        return False
+    if not all(len(a) < 80 for a in candidate.split("\r\n")):
+        return False
+    return True
+
