@@ -56,12 +56,6 @@ import string
 import sys
 import time
 
-SYMBOLIC_TYPES = (
-    ("directory", "d", "040"),
-    ("regular file", "-", "100"),
-    ("symbolic link", "l", "120"),
-    )
-
 def git_show(git, sha, attr):
     start = "#start#"
     end = "#end#"
