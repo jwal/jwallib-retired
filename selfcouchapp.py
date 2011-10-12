@@ -46,6 +46,7 @@ import os
 import posixpath
 import pycurl as curl
 import sys
+import time
 import urllib
 
 def write_file(path, data):
@@ -86,12 +87,19 @@ def sync_batch(git_couchdb_url, design_couchdb_url, branch):
         branches = ["git-branch-" + branch]
     with mkdtemp() as temp_dir:
         for branch in branches:
-            local_dir = os.path.join(temp_dir, urllib.quote(branch, safe=""))
+            basename = urllib.quote(branch, safe="")
+            local_dir = os.path.join(temp_dir, basename)
             commit = get(posixpath.join(git_couchdb_url, 
                                         branch))["commit"]["_id"]
             tree = get(posixpath.join(git_couchdb_url, 
                                       commit))["tree"]["_id"]
+            existing = get(posixpath.join(design_couchdb_url, 
+                                          "_design/%s" % (basename,)))
+            if existing.get("couchapp_git_tree_id") == tree:
+                continue
             tree_to_fs(git_couchdb_url, local_dir, tree)
+            write_file(os.path.join(local_dir, "couchapp_git_tree_id"),
+                       tree)
             call([os.path.join(os.environ["HOME"], "system", 
                                "couchapp", "bin", "couchapp"),
                   "push", local_dir, design_couchdb_url])
@@ -99,6 +107,11 @@ def sync_batch(git_couchdb_url, design_couchdb_url, branch):
 
 def main(argv):
     parser = optparse.OptionParser(__doc__)
+    parser.add_option("--poll", dest="mode", action="store_const",
+                      const="poll", default="once")
+    parser.add_option("--poll-interval", dest="poll_interval",
+                      type=int, default=60*60, 
+                      help="unit: seconds, default: hourly")
     parser.add_option("--branch", dest="branch", default=None) 
     options, args = parser.parse_args(argv)
     if len(args) == 0:
@@ -111,7 +124,12 @@ def main(argv):
         design_couchdb = args.pop(0)
     if len(args) > 0:
         parser.error("Unexpected: %r" % (args,))
-    sync_batch(git_couchdb, design_couchdb, options.branch)
+    if options.mode == "once":
+        sync_batch(git_couchdb, design_couchdb, options.branch)
+    elif options.mode == "poll":
+        while True:
+            sync_batch(git_couchdb, design_couchdb, options.branch)
+            time.sleep(options.poll_interval)
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))
