@@ -1,6 +1,9 @@
 # Copyright 2011 James Ascroft-Leigh
 
+import contextlib
+import shutil
 import string
+import tempfile
 
 try:
     from cStringIO import StringIO
@@ -56,3 +59,10 @@ def is_text(candidate):
         return False
     return True
 
+@contextlib.contextmanager
+def mkdtemp(*a, **kw):
+    temp_dir_path = tempfile.mkdtemp(*a, **kw)
+    try:
+        yield temp_dir_path
+    finally:
+        shutil.rmtree(temp_dir_path)

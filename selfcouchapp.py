@@ -1,7 +1,7 @@
 # Copyright 2011 James Ascroft-Leigh
 
 """\
-%prog [options]
+%prog [options] [GIT_COUCHDB] [DESIGN_COUCHDB]
 
 Couchapp is a tool for building CouchDB _design documents based on a
 standardized filesystem layout.  I think the idea is that normally a
@@ -33,14 +33,85 @@ feature development, testing my changes in the same couchdb that
 contains the stable and topic branches and both design documents.
 """
 
+from __future__ import with_statement
+
+from couchdblib import get
+from jwalutil import mkdtemp
+from posixutils import symbolic_to_octal_mode
+from pprint import pformat
+from process import call
+import base64
 import optparse
+import os
+import posixpath
+import pycurl as curl
 import sys
+import urllib
+
+def write_file(path, data):
+    with file(path, "wb") as fh:
+        fh.write(data)
+
+def blob_to_fs(git_couchdb_url, file_path, blob):
+    blob_data = get(posixpath.join(git_couchdb_url, blob))
+    if blob_data["encoding"] == "raw":
+        write_file(file_path, blob_data["raw"])
+    elif blob_data["encoding"] == "base64":
+        write_file(file_path, base64.b64decode(blob_data["base64"]))
+    else:
+        raise NotImplementedError(blob_data)
+
+def tree_to_fs(git_couchdb_url, local_dir, tree):
+    os.mkdir(local_dir)
+    tree_data = get(posixpath.join(git_couchdb_url, tree))
+    for entry in tree_data["children"]:
+        out_path = os.path.join(local_dir, entry["basename"])
+        if entry["child"]["type"] == "git-tree":
+            tree_to_fs(git_couchdb_url, out_path, entry["child"]["_id"])
+        elif entry["child"]["type"] == "git-blob":
+            blob_to_fs(git_couchdb_url, out_path, entry["child"]["_id"])
+        else:
+            raise NotImplementedError(entry)
+        mode = symbolic_to_octal_mode(entry["mode"])
+        os.chmod(out_path, int(mode, 8) & 0xfff)
+
+def sync_batch(git_couchdb_url, design_couchdb_url, branch):
+    if branch is None:
+        branches = [
+            b["_id"] for b in get(
+                posixpath.join(git_couchdb_url, "git-branches"))["branches"]]
+    else:
+        # TODO: Should really look for branches with this name using
+        # an index
+        branches = ["git-branch-" + branch]
+    with mkdtemp() as temp_dir:
+        for branch in branches:
+            local_dir = os.path.join(temp_dir, urllib.quote(branch, safe=""))
+            commit = get(posixpath.join(git_couchdb_url, 
+                                        branch))["commit"]["_id"]
+            tree = get(posixpath.join(git_couchdb_url, 
+                                      commit))["tree"]["_id"]
+            tree_to_fs(git_couchdb_url, local_dir, tree)
+            call([os.path.join(os.environ["HOME"], "system", 
+                               "couchapp", "bin", "couchapp"),
+                  "push", local_dir, design_couchdb_url])
+            
 
 def main(argv):
     parser = optparse.OptionParser(__doc__)
+    parser.add_option("--branch", dest="branch", default=None) 
     options, args = parser.parse_args(argv)
+    if len(args) == 0:
+        git_couchdb = "http://localhost:5984/jwallib"
+    else:
+        git_couchdb = args.pop(0)
+    if len(args) == 0:
+        design_couchdb = git_couchdb
+    else:
+        design_couchdb = args.pop(0)
     if len(args) > 0:
         parser.error("Unexpected: %r" % (args,))
+    sync_batch(git_couchdb, design_couchdb, options.branch)
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))
