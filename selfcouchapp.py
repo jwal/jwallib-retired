@@ -111,6 +111,8 @@ def sync_batch(git_couchdb_url, design_couchdb_url, branch, app_subdir):
             tree_to_fs(git_couchdb_url, local_dir, tree)
             write_file(os.path.join(local_dir, "couchapp_git_tree_id"),
                        tree)
+            if os.path.exists(os.path.join(local_dir, "_id")):
+                os.unlink(os.path.join(local_dir, "_id"))
             call([os.path.join(os.environ["HOME"], "system", 
                                "couchapp", "bin", "couchapp"),
                   "push", local_dir, design_couchdb_url])
