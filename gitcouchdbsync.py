@@ -222,6 +222,8 @@ def fetch_all(resolve_document, couchdb_url, seeds):
     local_buffer = {}
     fetched = set()
     for match in get(couchdb_url + "/_all_docs")["rows"]:
+        if not match["id"].startswith("git-"):
+            continue
         docref = id_to_docref(match["id"])
         if docref.kind not in MUTABLE_TYPES:
             fetched.add(docref)

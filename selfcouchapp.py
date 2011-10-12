@@ -74,9 +74,9 @@ def tree_to_fs(git_couchdb_url, local_dir, tree):
         else:
             raise NotImplementedError(entry)
         mode = symbolic_to_octal_mode(entry["mode"])
-        os.chmod(out_path, int(mode, 8) & 0xfff)
+        # os.chmod(out_path, int(mode, 8) & 0xfff)
 
-def sync_batch(git_couchdb_url, design_couchdb_url, branch):
+def sync_batch(git_couchdb_url, design_couchdb_url, branch, app_subdir):
     if branch is None:
         branches = [
             b["_id"] for b in get(
@@ -93,6 +93,17 @@ def sync_batch(git_couchdb_url, design_couchdb_url, branch):
                                         branch))["commit"]["_id"]
             tree = get(posixpath.join(git_couchdb_url, 
                                       commit))["tree"]["_id"]
+            if app_subdir != ".":
+                # TODO: Support multi-level sub_dir
+                assert "/" not in app_subdir, app_subdir
+                for child in get(posixpath.join(git_couchdb_url, 
+                                                tree))["children"]:
+                    if child["basename"] == app_subdir:
+                        assert child["child"]["type"] == "git-tree", child
+                        tree = child["child"]["_id"]
+                        break
+                else:
+                    raise Exception("Missing child %r" % (app_subdir,))
             existing = get(posixpath.join(design_couchdb_url, 
                                           "_design/%s" % (basename,)))
             if existing.get("couchapp_git_tree_id") == tree:
@@ -112,6 +123,8 @@ def main(argv):
     parser.add_option("--poll-interval", dest="poll_interval",
                       type=int, default=60*60, 
                       help="unit: seconds, default: hourly")
+    parser.add_option("--app-subdir", dest="app_subdir",
+                      default=".")
     parser.add_option("--branch", dest="branch", default=None) 
     options, args = parser.parse_args(argv)
     if len(args) == 0:
@@ -125,10 +138,12 @@ def main(argv):
     if len(args) > 0:
         parser.error("Unexpected: %r" % (args,))
     if options.mode == "once":
-        sync_batch(git_couchdb, design_couchdb, options.branch)
+        sync_batch(git_couchdb, design_couchdb, options.branch, 
+                   options.app_subdir)
     elif options.mode == "poll":
         while True:
-            sync_batch(git_couchdb, design_couchdb, options.branch)
+            sync_batch(git_couchdb, design_couchdb, options.branch,
+                       options.app_subdir)
             time.sleep(options.poll_interval)
 
 if __name__ == "__main__":
