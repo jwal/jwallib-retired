@@ -1,4 +1,4 @@
 {
-    "name": "Name of your CouchApp",
-    "description": "CouchApp"
+    "name": "Git browser",
+    "description": "If you were to, say, put Git (version control) objects such as commits, trees and blobs into a CouchDB then this CouchApp might help you to see what you've got."
 }
