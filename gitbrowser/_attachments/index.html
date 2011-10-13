@@ -11,7 +11,7 @@
 
     <div id="profile"></div>
     <div id="branches"/>
-    <div id="items"></div>
+    <!-- <div id="items"></div> -->
 
     <div id="sidebar">
       <p>Edit welcome message.</p>
@@ -24,7 +24,7 @@
       $("#account").evently("account", app);
       $("#profile").evently("profile", app);
       $.evently.connect("#account","#profile", ["loggedIn","loggedOut"]);
-      $("#items").evently("items", app);
+      <!-- $("#items").evently("items", app); -->
       $("#branches").evently("branches", app);
     });
   </script>
