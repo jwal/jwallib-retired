@@ -1,8 +1,11 @@
 function(data) {
-    $.log(data)
-    return {
-	items : data.rows.map(function(r) {
-	    return {message: r.toString()};
-	});
-    }
-}
+  // $.log(data)
+  var p;
+  return {
+    items : data.rows.map(function(r) {
+      p = (r.value && r.value.profile) || {};
+      p.message = r.value && r.value.message;
+      return p;
+    })
+  }
+};
