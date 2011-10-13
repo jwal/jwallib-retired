@@ -3,9 +3,7 @@ function(data) {
     var p;
     return {
 	items : data.rows.map(function(r) {
-	    return {
-		
-	    };
+	    return {message: r.toString()};
 	})
     }
 }
