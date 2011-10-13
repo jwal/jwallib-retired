@@ -1,5 +1,5 @@
 {
   "view" : "branches",
-  "descending" : false,
+  "descending" : "false",
   "limit" : 50
 }
