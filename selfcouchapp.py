@@ -108,6 +108,7 @@ def sync_batch(git_couchdb_url, design_couchdb_url, branch, app_subdir):
                                           "_design/%s" % (basename,)))
             if existing.get("couchapp_git_tree_id") == tree:
                 continue
+            print "Updating %r..." % (branch,)
             tree_to_fs(git_couchdb_url, local_dir, tree)
             write_file(os.path.join(local_dir, "couchapp_git_tree_id"),
                        tree)
@@ -116,6 +117,7 @@ def sync_batch(git_couchdb_url, design_couchdb_url, branch, app_subdir):
             call([os.path.join(os.environ["HOME"], "system", 
                                "couchapp", "bin", "couchapp"),
                   "push", local_dir, design_couchdb_url])
+            print "...done %r" % (branch,)
             
 
 def main(argv):
