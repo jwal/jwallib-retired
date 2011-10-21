@@ -22,7 +22,7 @@
       }
       $(window).hashchange(function() {
         console.debug("hashchange: " + location.hash);
-        if (location.hash == "git-branches")
+        if (location.hash == "#git-branches")
         {
           $("#main_body").html();
           $("#main_body").evently("branches", app);
