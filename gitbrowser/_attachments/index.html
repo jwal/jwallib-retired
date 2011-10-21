@@ -20,14 +20,18 @@
         location.hash = "#git-branches";
       }
       $(window).hashchange(function() {
+        $("#main_body").html("<em>Loading...</em>");
         if (location.hash == "#git-branches")
         {
-          $("#main_body").html();
           $("#main_body").evently("branches", app);
+        }
+        elif (location.hash.startwith("#git-branch-"))
+        {
+    $("#main_body").evently("");
         }
         else
         {
-          throw new Error("Unknown document: " + location.hash);
+          $("#main_body").html("<em>Failed to load</em>");
         }
       });
       $(window).hashchange();
