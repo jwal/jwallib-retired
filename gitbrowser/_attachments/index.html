@@ -82,7 +82,7 @@
                                           "mailto:" + doc.committer.email);
             $(".committer_date").text(doc.committer.date);
             $(".commit_message").text(doc.message);
-            $("#tree_sha").text(doc.commit.sha);
+            $("#tree_sha").text(doc.tree.sha);
             $("#tree_sha").attr("href", "#" + doc.tree._id);
           }, "json");
         }
