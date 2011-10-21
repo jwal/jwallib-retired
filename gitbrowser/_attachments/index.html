@@ -64,12 +64,22 @@
 				 + "class=\"commit_sha\"></span></h2>"
                                  + "<pre class=\"commit_message\"></pre>"
                                  + "<p>SHA: <a class=\"commit_sha\"></a></p>"
-                                 + "<p>Author: <a class=\"commit_author_name\"></a></p>"
+                                 + "<p>Author: <a class="
+				 + "\"commit_author_name\"></a> (<span "
+				 + "class=\"commit_author_date\"></span></p>"
+                                 + "<p>Committer: <a class="
+				 + "\"committer_name\"></a> (<span "
+				 + "class=\"committer_date\"></span></p>"
             );
             $(".commit_sha").text(doc.sha);
             $(".commit_author_name").text(doc.author.name);
             $(".commit_author_name").attr("href", 
                                           "mailto:" + doc.author.email);
+            $(".commit_author_date").text(doc.author.date);
+            $(".committer_name").text(doc.committer.name);
+            $(".committer_name").attr("href", 
+                                          "mailto:" + doc.committer.email);
+            $(".committer_date").text(doc.committer.date);
             $(".commit_message").text(doc.message);
           }, "json");
         }
