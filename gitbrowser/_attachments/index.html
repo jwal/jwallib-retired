@@ -44,9 +44,9 @@
         {
           var uri = (app.db.uri 
                      + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
-          $.get(uri, {}, {"success": function(data) {
+          $.get(uri, {}, function(data) {
             console.debug(data);
-          }});
+          });
         }
         else
         {
