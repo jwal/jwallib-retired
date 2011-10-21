@@ -31,7 +31,9 @@
         }
         else
         {
-          $("#main_body").html("<em>Failed to load</em>");
+          $("#main_body").html(
+            '<em>Failed to load.  Try going ' + 
+            '<a href="javascript: history.go(-1)">back</a>.</em>');
         }
       });
       $(window).hashchange();
