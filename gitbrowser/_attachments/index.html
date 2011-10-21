@@ -47,7 +47,7 @@
           $.get(uri, {}, function(doc) {
             console.debug(doc);
             $("#main_body").html("<h2>Git Branch <span "
-				 + "id=\"branch_name\"></span>"
+				 + "id=\"branch_name\"></span></h2>"
                                  + "<p>Commit: <a id=\"commit_sha\"></a></p>");
             $("#branch_name").text(doc.branch);
             $("#commit_sha").text(doc.commit.sha);
