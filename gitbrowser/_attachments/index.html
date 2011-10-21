@@ -17,6 +17,15 @@
       return (string.length >= prefix.length 
               && string.substring(0, prefix.length) == prefix);
     }
+    function trim_prefix(string, prefix)
+    {
+      if (!startswith(string, prefix))
+      {
+        throw new Error("String missing prefix: string=" + string
+                        + " prefix= " + prefix);
+      }
+      return string.substring(prefix.length, string.length - prefix.length);
+    }
     $.couch.app(function(app) {
       $("#account").evently("account", app);
       $.evently.connect("#account","#profile", ["loggedIn","loggedOut"]);
@@ -32,7 +41,11 @@
         }
         else if (startswith(location.hash, "#git-branch-"))
         {
-          $("#main_body").html("<em>Not implemented</em>");
+          var uri = (app.db.uri 
+                     + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
+          $.get(uri, {"success": function(data) {
+            console.debug(data);
+          }});
         }
         else
         {
