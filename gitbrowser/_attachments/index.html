@@ -44,9 +44,13 @@
         {
           var uri = (app.db.uri 
                      + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
-          $.get(uri, {}, function(data) {
-            console.debug(data);
-          });
+          $.get(uri, {}, function(doc) {
+            $("#main_body").html('<p id="#branch_name"></p>'
+                                 + '<p><a id="#commit_sha"></a></p>');
+            $("#branch_name").text(doc.branch);
+            $("#commit_sha").text(doc.commit.sha);
+            $("#commit_sha").attr("href", "#" + doc.commit._id);
+          }, "json");
         }
         else
         {
