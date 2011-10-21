@@ -11,7 +11,7 @@ import sys
 
 DEFAULT_CONFIG = {
         "mirror": "http://archive.ubuntu.com/ubuntu",
-        "distribution": "natty",
+        "distribution": "oneiric",
         "components": [
                 "main",
                 "universe",
