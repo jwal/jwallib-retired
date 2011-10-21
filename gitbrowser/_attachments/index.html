@@ -61,9 +61,9 @@
           $.get(uri, {}, function(doc) {
             console.debug(doc);
             $("#main_body").html("<h2>Git Commit <span "
-				 + "id=\"commit_sha\"></span></h2>"
-                                 + "<p>SHA: <a id=\"commit_sha\"></a></p>");
-            $("#commit_sha").text(doc.sha);
+				 + "class=\"commit_sha\"></span></h2>"
+                                 + "<p>SHA: <a class=\"commit_sha\"></a></p>");
+            $(".commit_sha").text(doc.sha);
           }, "json");
         }
         else
