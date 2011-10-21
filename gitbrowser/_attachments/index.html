@@ -17,13 +17,16 @@
       $.evently.connect("#account","#profile", ["loggedIn","loggedOut"]);
       if (location.hash == "")
       {
+        console.debug("start to hash up");
         location.hash = "#";
       }
       if (location.hash == "#")
       {
+        console.debug("hashing home");
         location.hash = "#git-branches";
       }
       $(window).hashchange(function() {
+        console.debug("hashchange: " + location.hash);
         if (location.hash == "git-branches")
         {
           $("#main_body").html();
