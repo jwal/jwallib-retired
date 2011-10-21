@@ -46,8 +46,8 @@
                      + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
           $.get(uri, {}, function(doc) {
             console.debug(doc);
-            $("#main_body").html('<p id="#branch_name"></p>'
-                                 + '<p><a id="#commit_sha"></a></p>');
+            $("#main_body").html("<p id=\"#branch_name\"></p>"
+                                 + "<p><a id=\"#commit_sha\"></a></p>");
             console.debug("fail");
             $("#branch_name").text(doc.branch);
             $("#commit_sha").text(doc.commit.sha);
