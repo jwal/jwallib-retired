@@ -89,7 +89,7 @@
             for (var i = 0; i < doc.parents.length; i++)
 	    {
 	      console.debug("got something", doc.parents[i]);
-              var e = $("#parents").append("<a></a>");
+              var e = $("#parents_list").append("<a></a>");
 	      e.attr("href", "#" + doc.parents[i]._id);
 	      e.text(doc.parents[i].sha);
 	    }
