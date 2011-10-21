@@ -62,8 +62,11 @@
             console.debug(doc);
             $("#main_body").html("<h2>Git Commit <span "
 				 + "class=\"commit_sha\"></span></h2>"
-                                 + "<p>SHA: <a class=\"commit_sha\"></a></p>");
+                                 + "<pre class=\"commit_message\"></pre>"
+                                 + "<p>SHA: <a class=\"commit_sha\"></a></p>"
+            );
             $(".commit_sha").text(doc.sha);
+            $(".commit_message").text(doc.message);
           }, "json");
         }
         else
