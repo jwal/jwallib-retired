@@ -8,7 +8,6 @@
     <div id="account"></div>
     <h1>Git Browser</h1>
     <div id="main_body">
-      <div id="branches"/>
     </div>
   </body>
   <script src="vendor/couchapp/loader.js"></script>
@@ -16,8 +15,26 @@
     $.couch.app(function(app) {
       $("#account").evently("account", app);
       $.evently.connect("#account","#profile", ["loggedIn","loggedOut"]);
-      $(window).hashchange(function() {alert(location.hash)});
-      $("#branches").evently("branches", app);
+      if (location.hash == "")
+      {
+        location.hash = "#";
+      }
+      if (location.hash == "#")
+      {
+        location.hash = "#git-branches";
+      }
+      $(window).hashchange(function() {
+        if (location.hash == "git-branches")
+        {
+          $("#main_body").html();
+          $("#main_body").evently("branches", app);
+        }
+        else
+        {
+          throw new Error("Unknown document");
+        }
+      });
+      $(window).hashchange();
     });
   </script>
 </html>
