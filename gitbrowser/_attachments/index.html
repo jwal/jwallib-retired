@@ -88,6 +88,7 @@
             $("#tree_sha").attr("href", "#" + doc.tree._id);
             for (var i = 0; i < doc.parents.length; i++)
 	    {
+	      console.debug("got something", doc.parents[i]);
               var e = $("#parents").append("<a></a>");
 	      e.attr("href", "#" + doc.parents[i]._id);
 	      e.text(doc.parents[i].sha);
