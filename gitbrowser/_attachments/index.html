@@ -16,7 +16,7 @@
     $.couch.app(function(app) {
       $("#account").evently("account", app);
       $.evently.connect("#account","#profile", ["loggedIn","loggedOut"]);
-      $(window).hashchange(alert(location.hash));
+      $(window).hashchange(function() {alert(location.hash)});
       $("#branches").evently("branches", app);
     });
   </script>
