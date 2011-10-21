@@ -70,6 +70,7 @@
                                  + "<p>Committer: <a class="
 				 + "\"committer_name\"></a> (<span "
 				 + "class=\"committer_date\"></span>)</p>"
+                                 + "<p>Tree: <a id=\"tree_sha\"></a></p>");
             );
             $(".commit_sha").text(doc.sha);
             $(".commit_author_name").text(doc.author.name);
@@ -81,6 +82,8 @@
                                           "mailto:" + doc.committer.email);
             $(".committer_date").text(doc.committer.date);
             $(".commit_message").text(doc.message);
+            $("#tree_sha").text(doc.commit.sha);
+            $("#tree_sha").attr("href", "#" + doc.tree._id);
           }, "json");
         }
         else
