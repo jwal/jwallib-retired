@@ -47,6 +47,7 @@
           $.get(uri, {}, function(doc) {
             $("#main_body").html('<p id="#branch_name"></p>'
                                  + '<p><a id="#commit_sha"></a></p>');
+            console.debug(doc);
             $("#branch_name").text(doc.branch);
             $("#commit_sha").text(doc.commit.sha);
             $("#commit_sha").attr("href", "#" + doc.commit._id);
