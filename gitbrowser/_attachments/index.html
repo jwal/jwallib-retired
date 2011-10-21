@@ -6,16 +6,17 @@
   </head>
   <body>
     <div id="account"></div>
-
     <h1>Git Browser</h1>
-
-    <div id="branches"/>
+    <div id="main_body">
+      <div id="branches"/>
+    </div>
   </body>
   <script src="vendor/couchapp/loader.js"></script>
   <script type="text/javascript" charset="utf-8">
     $.couch.app(function(app) {
       $("#account").evently("account", app);
       $.evently.connect("#account","#profile", ["loggedIn","loggedOut"]);
+      $(window).hashchange(alert(location.hash));
       $("#branches").evently("branches", app);
     });
   </script>
