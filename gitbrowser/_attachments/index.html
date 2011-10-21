@@ -12,6 +12,11 @@
   </body>
   <script src="vendor/couchapp/loader.js"></script>
   <script type="text/javascript" charset="utf-8">
+    function startswith(string, prefix)
+    {
+      return (string.length >= prefix.length 
+              && string.substring(0, prefix.length) == prefix);
+    }
     $.couch.app(function(app) {
       $("#account").evently("account", app);
       $.evently.connect("#account","#profile", ["loggedIn","loggedOut"]);
@@ -25,7 +30,7 @@
         {
           $("#main_body").evently("branches", app);
         }
-        else if (location.hash.startwith("#git-branch-"))
+        else if (startswith(location.hash, "#git-branch-"))
         {
           $("#main_body").html("<em>Not implemented</em>");
         }
