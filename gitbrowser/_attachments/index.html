@@ -71,6 +71,8 @@
 				 + "\"committer_name\"></a> (<span "
 				 + "class=\"committer_date\"></span>)</p>"
                                  + "<p>Tree: <a id=\"tree_sha\"></a></p>"
+                                 + "<p>Parents:</p><ul "
+				 + "id=\"parents_list\"></ul>"
             );
             $(".commit_sha").text(doc.sha);
             $(".commit_author_name").text(doc.author.name);
@@ -84,6 +86,12 @@
             $(".commit_message").text(doc.message);
             $("#tree_sha").text(doc.tree.sha);
             $("#tree_sha").attr("href", "#" + doc.tree._id);
+            for (var i = 0; i < doc.parents.length; i++)
+	    {
+              var e = $("#parents").append("<a></a>");
+	      e.attr("href", "#" + doc.parents[i]._id);
+	      e.text(doc.parents[i].sha);
+	    }
           }, "json");
         }
         else
