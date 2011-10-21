@@ -64,8 +64,12 @@
 				 + "class=\"commit_sha\"></span></h2>"
                                  + "<pre class=\"commit_message\"></pre>"
                                  + "<p>SHA: <a class=\"commit_sha\"></a></p>"
+                                 + "<p>Author: <a class=\"commit_author_name\"></a></p>"
             );
             $(".commit_sha").text(doc.sha);
+            $(".commit_author_name").text(doc.author.name);
+            $(".commit_author_name").attr("href", 
+                                          "mailto:" + doc.author.email);
             $(".commit_message").text(doc.message);
           }, "json");
         }
