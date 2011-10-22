@@ -109,16 +109,16 @@
             );
             $(".tree_sha").text(doc.sha);
 	    console.debug(doc);
-            for (var i = 0; i < doc.entries.length; i++)
+            for (var i = 0; i < doc.children.length; i++)
 	    {
-	      console.debug(doc.entries[i]);
+	      console.debug(doc.children[i]);
 	      var li = $("<li></li>");
               var mode_span = $("<span></span>");
-	      mode_span.text(doc.entries[i].mode);
+	      mode_span.text(doc.children[i].mode);
 	      li.append(mode_span);
 	      var a = $("<a></a>");
-	      a.attr("href", "#" + doc.parents[i]._id);
-	      a.text(doc.parents[i].sha);
+	      a.attr("href", "#" + doc.children[i]._id);
+	      a.text(doc.children[i].sha);
 	      li.append(a);
               $("#parents_list").append(li);
 	    }
