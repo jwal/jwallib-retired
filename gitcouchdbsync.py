@@ -57,14 +57,17 @@ import sys
 import time
 
 def git_show(git, sha, attr):
-    start = "#start#"
-    end = "#end#"
-    out = call(git + ["show", "--format=format:%s%s%s" % (start, attr, end),
-                      "--quiet", sha], do_check=False)
-    sindex = out.index(start) + len(start)
-    eindex = out.rindex(end)
-    assert sindex <= eindex, out
-    return out[sindex:eindex]
+    try:
+        start = "#start#"
+        end = "#end#"
+        out = call(git + ["show", "--format=format:%s%s%s" % (start, attr, end),
+                          "--quiet", sha], do_check=False)
+        sindex = out.index(start) + len(start)
+        eindex = out.rindex(end)
+        assert sindex <= eindex, out
+        return out[sindex:eindex]
+    except Exception:
+        raise Exception("Unable to get git attribute %r from %r" % (attr, sha))
 
 def resolve_document_using_git(git, docref):
     document = docref_to_dict(docref)
