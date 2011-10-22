@@ -89,10 +89,12 @@
             for (var i = 0; i < doc.parents.length; i++)
 	    {
 	      console.debug("got something", doc.parents[i]);
-              var li = $("#parents_list").append("<li></li>");
-	      var a = li.append("<a></a>");
+	      var li = $("<li></li>")
+	      var a = $("<a></a>")
 	      a.attr("href", "#" + doc.parents[i]._id);
 	      a.text(doc.parents[i].sha);
+	      li.append(a);
+              $("#parents_list").append(li);
 	    }
           }, "json");
         }
