@@ -6,26 +6,158 @@
   </head>
   <body>
     <div id="account"></div>
-
     <h1>Git Browser</h1>
-
-    <!-- <div id="profile"></div> -->
-    <div id="branches"/>
-    <!-- <div id="items"></div> -->
-
-    <!-- <div id="sidebar"> -->
-    <!--   <p>Edit welcome message.</p> -->
-    <!--   <p>Ideas: You could easily turn this into a photo sharing app, or a grocery list, or a chat room.</p> -->
-    <!-- </div> -->
+    <div id="main_body">
+    </div>
   </body>
   <script src="vendor/couchapp/loader.js"></script>
   <script type="text/javascript" charset="utf-8">
+    function startswith(string, prefix)
+    {
+      return (string.length >= prefix.length 
+              && string.substring(0, prefix.length) == prefix);
+    }
+    function trim_prefix(string, prefix)
+    {
+      if (!startswith(string, prefix))
+      {
+        throw new Error("String missing prefix: string=" + string
+                        + " prefix= " + prefix);
+      }
+      return string.substring(prefix.length, 
+                              string.length - prefix.length + 1);
+    }
     $.couch.app(function(app) {
       $("#account").evently("account", app);
-      <!-- $("#profile").evently("profile", app); -->
       $.evently.connect("#account","#profile", ["loggedIn","loggedOut"]);
-      <!-- $("#items").evently("items", app); -->
-      $("#branches").evently("branches", app);
+      if (location.hash == "" || location.hash == "#")
+      {
+        location.hash = "#git-branches";
+      }
+      $(window).hashchange(function() {
+        $("#main_body").html("<em>Loading...</em>");
+        if (location.hash == "#git-branches")
+        {
+          $("#main_body").evently("branches", app);
+        }
+        else if (startswith(location.hash, "#git-branch-"))
+        {
+          var uri = (app.db.uri 
+                     + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
+          $.get(uri, {}, function(doc) {
+            $("#main_body").html("<h2>Git Branch <span "
+				 + "id=\"branch_name\"></span></h2>"
+                                 + "<p>Commit: <a id=\"commit_sha\"></a></p>");
+            $("#branch_name").text(doc.branch);
+            $("#commit_sha").text(doc.commit.sha);
+            $("#commit_sha").attr("href", "#" + doc.commit._id);
+          }, "json");
+        }
+        else if (startswith(location.hash, "#git-commit-"))
+        {
+          var uri = (app.db.uri 
+                     + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
+          $.get(uri, {}, function(doc) {
+            $("#main_body").html("<h2>Git Commit <span "
+				 + "class=\"commit_sha\"></span></h2>"
+                                 + "<pre class=\"commit_message\"></pre>"
+                                 + "<p>SHA: <a class=\"commit_sha\"></a></p>"
+                                 + "<p>Author: <a class="
+				 + "\"commit_author_name\"></a> (<span "
+				 + "class=\"commit_author_date\"></span>)</p>"
+                                 + "<p>Committer: <a class="
+				 + "\"committer_name\"></a> (<span "
+				 + "class=\"committer_date\"></span>)</p>"
+                                 + "<p>Tree: <a id=\"tree_sha\"></a></p>"
+                                 + "<p>Parents:</p><ul "
+				 + "id=\"parents_list\"></ul>"
+            );
+            $(".commit_sha").text(doc.sha);
+            $(".commit_author_name").text(doc.author.name);
+            $(".commit_author_name").attr("href", 
+                                          "mailto:" + doc.author.email);
+            $(".commit_author_date").text(doc.author.date);
+            $(".committer_name").text(doc.committer.name);
+            $(".committer_name").attr("href", 
+                                          "mailto:" + doc.committer.email);
+            $(".committer_date").text(doc.committer.date);
+            $(".commit_message").text(doc.message);
+            $("#tree_sha").text(doc.tree.sha);
+            $("#tree_sha").attr("href", "#" + doc.tree._id);
+            for (var i = 0; i < doc.parents.length; i++)
+	    {
+	      var li = $("<li></li>");
+	      var a = $("<a></a>");
+	      a.attr("href", "#" + doc.parents[i]._id);
+	      a.text(doc.parents[i].sha);
+	      li.append(a);
+              $("#parents_list").append(li);
+	    }
+          }, "json");
+        }
+        else if (startswith(location.hash, "#git-tree-"))
+        {
+          var uri = (app.db.uri 
+                     + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
+          $.get(uri, {}, function(doc) {
+            $("#main_body").html("<h2>Git Tree <span "
+				 + "class=\"tree_sha\"></span></h2>"
+                                 + "<pre class=\"commit_message\"></pre>"
+                                 + "<p>SHA: <a class=\"commit_sha\"></a></p>"
+                                 + "<p>Entries:</p><ul "
+				 + "id=\"entries_list\"></ul>"
+            );
+            $(".tree_sha").text(doc.sha);
+            for (var i = 0; i < doc.children.length; i++)
+	    {
+	      var li = $("<li></li>");
+              var mode_span = $("<tt></tt>");
+	      mode_span.text(doc.children[i].mode);
+	      li.append(mode_span);
+	      li.append(" | ");
+              var basename_span = $("<span></span>");
+	      basename_span.text(doc.children[i].basename);
+	      li.append(basename_span);
+	      li.append(" | ");
+	      var a = $("<a></a>");
+	      a.attr("href", "#" + doc.children[i].child._id);
+	      a.text(doc.children[i].child.sha);
+	      li.append(a);
+              $("#entries_list").append(li);
+	    }
+          }, "json");
+        }
+        else if (startswith(location.hash, "#git-blob-"))
+        {
+          var uri = (app.db.uri 
+                     + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
+          $.get(uri, {}, function(doc) {
+            $("#main_body").html("<h2>Git Blob <span "
+				 + "class=\"blob_sha\"></span></h2>"
+                                 + "<p>SHA: <a class=\"blob_sha\"></a></p>"
+	    );
+            if (doc.encoding == "raw")
+            {
+              var pre = $("<pre></pre>");
+	      pre.text(doc.raw);
+	      $("#main_body").append(pre)
+            }
+            else
+            {
+              $("#main_body").append("<p><em>Appears to be a "
+				     + "binary file</em><p>");
+            }
+            $(".blob_sha").text(doc.sha);
+          }, "json");
+        }
+        else
+        {
+          $("#main_body").html(
+            '<em>Failed to load.  Try going ' + 
+            '<a href="javascript: history.go(-1)">back</a>.</em>');
+        }
+      });
+      $(window).hashchange();
     });
   </script>
 </html>
