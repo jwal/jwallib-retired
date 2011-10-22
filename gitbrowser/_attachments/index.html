@@ -114,9 +114,13 @@
 	      console.debug(doc.children[i]);
 	      var li = $("<li></li>");
               var mode_span = $("<tt></tt>");
-	      li.append(" | ");
 	      mode_span.text(doc.children[i].mode);
 	      li.append(mode_span);
+	      li.append(" | ");
+              var basename_span = $("<span></span>");
+	      basename_span.text(doc.children[i].basename);
+	      li.append(basename_span);
+	      li.append(" | ");
 	      var a = $("<a></a>");
 	      a.attr("href", "#" + doc.children[i]._id);
 	      a.text(doc.children[i].sha);
