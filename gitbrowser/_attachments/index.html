@@ -122,8 +122,8 @@
 	      li.append(basename_span);
 	      li.append(" | ");
 	      var a = $("<a></a>");
-	      a.attr("href", "#" + doc.children[i]._id);
-	      a.text(doc.children[i].sha);
+	      a.attr("href", "#" + doc.children[i].child._id);
+	      a.text(doc.children[i].child.sha);
 	      li.append(a);
               $("#entries_list").append(li);
 	    }
