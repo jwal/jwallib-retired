@@ -45,7 +45,6 @@
           var uri = (app.db.uri 
                      + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
           $.get(uri, {}, function(doc) {
-            console.debug(doc);
             $("#main_body").html("<h2>Git Branch <span "
 				 + "id=\"branch_name\"></span></h2>"
                                  + "<p>Commit: <a id=\"commit_sha\"></a></p>");
@@ -59,7 +58,6 @@
           var uri = (app.db.uri 
                      + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
           $.get(uri, {}, function(doc) {
-            console.debug(doc);
             $("#main_body").html("<h2>Git Commit <span "
 				 + "class=\"commit_sha\"></span></h2>"
                                  + "<pre class=\"commit_message\"></pre>"
@@ -88,9 +86,37 @@
             $("#tree_sha").attr("href", "#" + doc.tree._id);
             for (var i = 0; i < doc.parents.length; i++)
 	    {
-	      console.debug("got something", doc.parents[i]);
-	      var li = $("<li></li>")
-	      var a = $("<a></a>")
+	      var li = $("<li></li>");
+	      var a = $("<a></a>");
+	      a.attr("href", "#" + doc.parents[i]._id);
+	      a.text(doc.parents[i].sha);
+	      li.append(a);
+              $("#parents_list").append(li);
+	    }
+          }, "json");
+        }
+        else if (startswith(location.hash, "#git-tree-"))
+        {
+          var uri = (app.db.uri 
+                     + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
+          $.get(uri, {}, function(doc) {
+            $("#main_body").html("<h2>Git Tree <span "
+				 + "class=\"tree_sha\"></span></h2>"
+                                 + "<pre class=\"commit_message\"></pre>"
+                                 + "<p>SHA: <a class=\"commit_sha\"></a></p>"
+                                 + "<p>Entries:</p><ul "
+				 + "id=\"entries_list\"></ul>"
+            );
+            $(".tree_sha").text(doc.sha);
+	    console.debug(doc);
+            for (var i = 0; i < doc.entries.length; i++)
+	    {
+	      console.debug(doc.entries[i]);
+	      var li = $("<li></li>");
+              var mode_span = $("<span></span>");
+	      mode_span.text(doc.entries[i].mode);
+	      li.append(mode_span);
+	      var a = $("<a></a>");
 	      a.attr("href", "#" + doc.parents[i]._id);
 	      a.text(doc.parents[i].sha);
 	      li.append(a);
