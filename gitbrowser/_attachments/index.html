@@ -137,8 +137,16 @@
                                  + "<p>SHA: <a class=\"blob_sha\"></a></p>"
 	    );
 	    console.debug(doc);
-            if (doc.encoding == "text")
+            if (doc.encoding == "raw")
             {
+              var pre = $("<pre></pre>");
+	      pre.text(doc.raw);
+	      $("#main_body").append(pre)
+            }
+            else
+            {
+              $("#main_body").append("<p><em>Appears to be a "
+				     + "binary file</em><p>");
             }
             $(".blob_sha").text(doc.sha);
           }, "json");
