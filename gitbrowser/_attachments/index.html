@@ -108,10 +108,8 @@
 				 + "id=\"entries_list\"></ul>"
             );
             $(".tree_sha").text(doc.sha);
-	    console.debug(doc);
             for (var i = 0; i < doc.children.length; i++)
 	    {
-	      console.debug(doc.children[i]);
 	      var li = $("<li></li>");
               var mode_span = $("<tt></tt>");
 	      mode_span.text(doc.children[i].mode);
@@ -127,6 +125,22 @@
 	      li.append(a);
               $("#entries_list").append(li);
 	    }
+          }, "json");
+        }
+        else if (startswith(location.hash, "#git-blob-"))
+        {
+          var uri = (app.db.uri 
+                     + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
+          $.get(uri, {}, function(doc) {
+            $("#main_body").html("<h2>Git Blob <span "
+				 + "class=\"blob_sha\"></span></h2>"
+                                 + "<p>SHA: <a class=\"blob_sha\"></a></p>"
+	    console.debug(doc);
+            if (doc.encoding == "text")
+            {
+            }
+            );
+            $(".blob_sha").text(doc.sha);
           }, "json");
         }
         else
