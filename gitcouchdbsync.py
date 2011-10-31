@@ -60,7 +60,8 @@ def git_show(git, sha, attr):
     try:
         start = "#start#"
         end = "#end#"
-        out = call(git + ["show", "--format=format:%s%s%s" % (start, attr, end),
+        out = call(git + ["show", 
+                          "--format=format:%s%s%s" % (start, attr, end),
                           "--quiet", sha], do_check=False)
         sindex = out.index(start) + len(start)
         eindex = out.rindex(end)
