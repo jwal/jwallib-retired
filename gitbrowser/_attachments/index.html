@@ -105,25 +105,25 @@
 				 + "class=\"tree_sha\"></span></h2>"
                                  + "<pre class=\"commit_message\"></pre>"
                                  + "<p>SHA: <a class=\"tree_sha\"></a></p>"
-                                 + "<p>Entries:</p><ul "
-				 + "id=\"entries_list\"></ul>"
+                                 + "<p>Entries:</p><table "
+				 + "id=\"entries_list\"></table>"
             );
             $(".tree_sha").text(doc.sha);
             for (var i = 0; i < doc.children.length; i++)
 	    {
-	      var li = $("<li></li>");
-              var mode_span = $("<tt></tt>");
+	      var li = $("<tr></tr>");
+              var mode_span = $("<td></td>");
 	      mode_span.text(doc.children[i].mode);
 	      li.append(mode_span);
-	      li.append(" | ");
-              var basename_span = $("<span></span>");
+              var basename_span = $("<th></th>");
 	      basename_span.text(doc.children[i].basename);
 	      li.append(basename_span);
-	      li.append(" | ");
+	      var sha_cell = $("<td></td>");
 	      var a = $("<a></a>");
 	      a.attr("href", "#" + doc.children[i].child._id);
 	      a.text(doc.children[i].child.sha);
-	      li.append(a);
+	      sha_cell.append(a);
+	      li.append(sha_cell);
               $("#entries_list").append(li);
 	    }
           }, "json");
