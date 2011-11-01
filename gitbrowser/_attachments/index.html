@@ -118,7 +118,7 @@
               var basename_span = $("<th style=\"text-align: left;\"></th>");
 	      basename_span.text(doc.children[i].basename);
 	      li.append(basename_span);
-	      var sha_cell = $("<td></td>");
+	      var sha_cell = $("<td style=\"font-family: monospace;\"></td>");
 	      var a = $("<a></a>");
 	      a.attr("href", "#" + doc.children[i].child._id);
 	      a.text(doc.children[i].child.sha);
