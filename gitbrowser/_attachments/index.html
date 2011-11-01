@@ -99,11 +99,12 @@
         {
           var uri = (app.db.uri 
                      + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
-          $.get(uri, {}, function(doc) {
+          $.get(uri, {}, function(doc)
+          {
             $("#main_body").html("<h2>Git Tree <span "
 				 + "class=\"tree_sha\"></span></h2>"
                                  + "<pre class=\"commit_message\"></pre>"
-                                 + "<p>SHA: <a class=\"commit_sha\"></a></p>"
+                                 + "<p>SHA: <a class=\"tree_sha\"></a></p>"
                                  + "<p>Entries:</p><ul "
 				 + "id=\"entries_list\"></ul>"
             );
