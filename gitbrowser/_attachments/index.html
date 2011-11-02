@@ -57,7 +57,7 @@
                 if (branch_name == doc.branches[i].branch)
                 {
                   found_it = true;
-                  $.get(app.db.uri + $.couch.encodeDocId(doc.branches[i]._id,
+                  $.get(app.db.uri + $.couch.encodeDocId(doc.branches[i]._id),
                         {}, function(bdoc)
                   {
                     console.debug(bdoc);
