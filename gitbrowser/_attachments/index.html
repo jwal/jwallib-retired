@@ -54,11 +54,20 @@
                 {}, function(doc)
           {
             console.debug(doc);
+            var found_it = false;
             for (var i = 0; i < doc.branches.length; i++)
 	    {
-              
+              if (branch_name == doc.branches[i].branch)
+              {
+                found_it = true;
+                
+                break;
+              }
             }
-            $("#main_body").html();
+            if (!found_it)
+            {
+              $("#main_body").text("No branch: " + branch_name);
+            }
           }, "json");
         }
         else if (location.hash == "#git-branches")
