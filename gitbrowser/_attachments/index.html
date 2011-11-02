@@ -36,7 +36,11 @@
       }
       $(window).hashchange(function() {
         $("#main_body").html("<em>Loading...</em>");
-        if (location.hash == "#git-branches")
+        if (startswith(location.hash, "#show/"))
+        {
+          $("#main_body").text("Loading...");
+        }
+        else if (location.hash == "#git-branches")
         {
           $("#main_body").evently("branches", app);
         }
