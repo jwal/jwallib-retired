@@ -53,7 +53,7 @@
           $.get(app.db.uri + $.couch.encodeDocId("git-branches"),
                 {}, function(doc)
           {
-            console.debug(doc);
+            console.debug(typeof doc);
             for (var i = 0; i < doc.branches.length; i++)
 	    {
               
