@@ -32,7 +32,7 @@
       $.evently.connect("#account","#profile", ["loggedIn","loggedOut"]);
       if (location.hash == "" || location.hash == "#")
       {
-        location.hash = "#git-branches";
+        location.hash = "#show/master/head/README";
       }
       $(window).hashchange(function() {
         $("#main_body").html("<em>Loading...</em>");
