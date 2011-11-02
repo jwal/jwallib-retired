@@ -48,26 +48,28 @@
           else
           {
             var branch_name = show_url.substring(0, slash_index);
-            console.debug(branch_name);
-          }
-          $.get(app.db.uri + $.couch.encodeDocId("git-branches"),
-                {}, function(doc)
-          {
-            console.debug(doc);
-            var found_it = false;
-            for (var i = 0; i < doc.branches.length; i++)
-	    {
-              if (branch_name == doc.branches[i].branch)
-              {
-                found_it = true;
-                
-                break;
-              }
-            }
-            if (!found_it)
+            $.get(app.db.uri + $.couch.encodeDocId("git-branches"),
+                  {}, function(doc)
             {
-              $("#main_body").text("No branch: " + branch_name);
-            }
+              var found_it = false;
+              for (var i = 0; i < doc.branches.length; i++)
+              {
+                if (branch_name == doc.branches[i].branch)
+                {
+                  found_it = true;
+                  $.get(app.db.uri + $.couch.encodeDocId(doc.branches[i]._id,
+                        {}, function(bdoc)
+                  {
+                    console.debug(bdoc);
+                  }, "json");
+                  break;
+                }
+              }
+              if (!found_it)
+              {
+                $("#main_body").text("No branch: " + branch_name);
+              }
+          }
           }, "json");
         }
         else if (location.hash == "#git-branches")
