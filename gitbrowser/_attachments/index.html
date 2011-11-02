@@ -32,13 +32,33 @@
       $.evently.connect("#account","#profile", ["loggedIn","loggedOut"]);
       if (location.hash == "" || location.hash == "#")
       {
-        location.hash = "#show/master/head/README";
+        location.replace("#show/master/head/README");
       }
       $(window).hashchange(function() {
         $("#main_body").html("<em>Loading...</em>");
         if (startswith(location.hash, "#show/"))
         {
           $("#main_body").text("Loading...");
+          var show_url = trim_prefix(location.hash, "#show/");
+          var slash_index = show_url.indexOf("/");
+          if (slash_index == -1)
+          {
+            $("#main_body").text("Sorry, invalid URL?");
+          }
+          else
+          {
+            var branch_name = show_url.substring(0, slash_index);
+            console.debug(branch_name);
+          }
+          $.get(app.db.uri + $.couch.encodeDocId("git-branches"),
+                {}, function(doc)
+          {
+            for (var i = 0; i < doc.branches.length; i++)
+	    {
+              
+            }
+            $("#main_body").html();
+          });
         }
         else if (location.hash == "#git-branches")
         {
