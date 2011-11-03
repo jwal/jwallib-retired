@@ -88,7 +88,7 @@
               else
               {
                 var branch = get1(branches);
-                $.get(app.db.uri + $.couch.encodeDocId("git-branches"),
+                $.get(app.db.uri + $.couch.encodeDocId(branch._id
                       {}, function(bdoc)
                 {
                   console.debug(bdoc);
