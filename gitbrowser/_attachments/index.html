@@ -88,7 +88,11 @@
               else
               {
                 var branch = get1(branches);
-                console.debug(branch);
+                $.get(app.db.uri + $.couch.encodeDocId("git-branches"),
+                      {}, function(bdoc)
+                {
+                  console.debug(bdoc);
+                }, "json");
               }
             }, "json");
           }
