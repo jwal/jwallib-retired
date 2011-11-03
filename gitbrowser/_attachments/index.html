@@ -41,6 +41,18 @@
       }
       return result;
     }
+    function get1(items)
+    {
+      if (items.length == 0)
+      {
+        throw new Error("No items");
+      }
+      else if (items.length > 1)
+      {
+        throw new Error("Ambiguous results: " + items);
+      }
+      return items[0];
+    }
     $.couch.app(function(app) {
       $("#account").evently("account", app);
       $.evently.connect("#account","#profile", ["loggedIn","loggedOut"]);
@@ -68,7 +80,16 @@
               var found_it = false;
               var by_name = group_by(doc.branches, 
                                      function(b) {return b.branch});
-              console.debug("items", by_name);
+              var branches = by_name[branch_name];
+              if (typeof branches == "undefined")
+              {
+                $("#main_body").text("Missing branch: " + branch_name);
+              }
+              else
+              {
+                var branch = get1(branches);
+                console.debug(branch);
+              }
             }, "json");
           }
         }
