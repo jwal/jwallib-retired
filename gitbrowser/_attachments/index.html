@@ -91,7 +91,15 @@
                 $.get(app.db.uri + $.couch.encodeDocId(branch._id),
                       {}, function(bdoc)
                 {
-                  console.debug(bdoc);
+                  $.get(app.db.uri + $.couch.encodeDocId(bdoc.commit._id),
+                        {}, function(cdoc) 
+                  {
+                    $.get(app.db.uri + $.couch.encodeDocId(cdoc.tree._id),
+                        {}, function(tdoc) 
+                    {
+                      console.debug(tdoc);
+                    }, "json");
+                  }, "json");
                 }, "json");
               }
             }, "json");
