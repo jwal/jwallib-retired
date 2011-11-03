@@ -27,6 +27,20 @@
       return string.substring(prefix.length, 
                               string.length - prefix.length + 1);
     }
+    function group_by(items, key_getter)
+    {
+      var result = {};
+      for (var i = 0; i < items.length; i++)
+      {
+        var key = key_getter(items[i]);
+        if (typeof result[key] == "undefined")
+        {
+          result[key] = [];
+        }
+        result[key].push(items[i]);
+      }
+      return result;
+    }
     $.couch.app(function(app) {
       $("#account").evently("account", app);
       $.evently.connect("#account","#profile", ["loggedIn","loggedOut"]);
@@ -52,7 +66,10 @@
                   {}, function(doc)
             {
               var found_it = false;
-              for (var i = 0; i < doc.branches.length; i++)
+              var by_name = group_by(doc.branches, 
+                                     function(b) {return b.branch});
+              console.debug(by_name);
+/*              for (var i = 0; i < doc.branches.length; i++)
               {
                 if (branch_name == doc.branches[i].branch)
                 {
@@ -68,7 +85,8 @@
               if (!found_it)
               {
                 $("#main_body").text("No branch: " + branch_name);
-              }
+              }*/
+            }
           }, "json");
         }
         else if (location.hash == "#git-branches")
