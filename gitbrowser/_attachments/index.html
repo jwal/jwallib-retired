@@ -77,7 +77,8 @@
             var url_remainder = trim_prefix(show_url, branch_name + "/");
             var slash_index = url_remainder.indexOf("/");
             var revision = url_remainder.substring(0, slash_index);
-            console.debug([show_url, branch_name, url_remainder, revision]);
+            console.debug([show_url, branch_name, url_remainder, revision,
+      trim_prefix("abc", "ab"), trim_prefix("a/b/c", "a/")]);
             if (revision == "head")
             {
               if (slash_index == -1)
