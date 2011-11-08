@@ -74,35 +74,56 @@
           else
           {
             var branch_name = show_url.substring(0, slash_index);
-            $.get(app.db.uri + $.couch.encodeDocId("git-branches"),
-                  {}, function(doc)
+            var url_remainder = trim_prefix(show_url, branch_name + "/");
+            var slash_index = url_remainder.indexOf("/");
+            var revision = url_remainder.substring(0, slash_index);
+            console.debug(revision);
+            if (revision == "head")
             {
-              var found_it = false;
-              var by_name = group_by(doc.branches, 
-                                     function(b) {return b.branch});
-              var branches = by_name[branch_name];
-              if (typeof branches == "undefined")
+              if (slash_index == -1)
               {
-                $("#main_body").text("Missing branch: " + branch_name);
+                $("#main_body").text("Sorry, invalid URL?");
               }
               else
               {
-                var branch = get1(branches);
-                $.get(app.db.uri + $.couch.encodeDocId(branch._id),
-                      {}, function(bdoc)
+                $.get(app.db.uri + $.couch.encodeDocId("git-branches"),
+                      {}, function(doc)
                 {
-                  $.get(app.db.uri + $.couch.encodeDocId(bdoc.commit._id),
-                        {}, function(cdoc) 
+                  var found_it = false;
+                  var by_name = group_by(doc.branches, 
+                                         function(b) {return b.branch});
+                  var branches = by_name[branch_name];
+                  if (typeof branches == "undefined")
                   {
-                    $.get(app.db.uri + $.couch.encodeDocId(cdoc.tree._id),
-                        {}, function(tdoc) 
+                    $("#main_body").text("Missing branch: " + branch_name);
+                  }
+                  else
+                  {
+                    var branch = get1(branches);
+                    $.get(app.db.uri + $.couch.encodeDocId(branch._id),
+                          {}, function(bdoc)
                     {
-                      console.debug(tdoc);
+                      $.get(app.db.uri + $.couch.encodeDocId(bdoc.commit._id),
+                            {}, function(cdoc) 
+                      {
+                        $.get(app.db.uri + $.couch.encodeDocId(cdoc.tree._id),
+                            {}, function(tdoc) 
+                        {
+                          for (var i = 0; i < tdoc.children.length; i++)
+                          {
+                            if (
+                          }
+                        }, "json");
+                      }, "json");
                     }, "json");
-                  }, "json");
+                  }
                 }, "json");
               }
-            }, "json");
+            }
+            else
+            {
+              $("#main_body").text("Must go to head revision for now");
+            }
           }
         }
         else if (location.hash == "#git-branches")
@@ -126,7 +147,8 @@
         {
           var uri = (app.db.uri 
                      + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
-          $.get(uri, {}, function(doc) {
+          $.get(uri, {}, function(doc)
+          {
             $("#main_body").html("<h2>Git Commit <span "
 				 + "class=\"commit_sha\"></span></h2>"
                                  + "<pre class=\"commit_message\"></pre>"
