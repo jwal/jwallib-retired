@@ -24,8 +24,7 @@
         throw new Error("String missing prefix: string=" + string
                         + " prefix= " + prefix);
       }
-      return string.substring(prefix.length, 
-                              string.length - prefix.length + 1);
+      return string.substring(prefix.length, string.length);
     }
     function group_by(items, key_getter)
     {
