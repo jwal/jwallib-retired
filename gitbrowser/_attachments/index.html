@@ -126,7 +126,8 @@
                             }
                             else
                             {
-                              var blob_id = get1(by_basename[basename])._id;
+                              var blob_id = get1(
+                                by_basename[basename]).child._id;
                               $.get(app.db.uri + $.couch.encodeDocId(blob_id),
                                     {}, function(bdoc) 
                               {
