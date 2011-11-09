@@ -108,7 +108,7 @@
                         var slash_index = path.indexOf("/");
                         if (slash_index == -1)
                         {
-                          var basename = path.substring(0, slash_index);
+                          var basename = path;
                           $.get(app.db.uri 
                                 + $.couch.encodeDocId(cdoc.tree._id), {}, 
                                 function(tdoc) 
