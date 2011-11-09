@@ -98,48 +98,7 @@
                   }
                   else
                   {
-                    /*var branch = get1(branches);
-                    $.get(app.db.uri + $.couch.encodeDocId(branch._id),
-                          {}, function(bdoc)
-                    {
-                      $.get(app.db.uri + $.couch.encodeDocId(bdoc.commit._id),
-                            {}, function(cdoc) 
-                      {
-                        var slash_index = path.indexOf("/");
-                        if (slash_index == -1)
-                        {
-                          var basename = path.substring(o, slash_index);
-                          $.get(app.db.uri 
-                                + $.couch.encodeDocId(cdoc.tree._id), {}, 
-                                function(tdoc) 
-                          {
-                            var by_basename = group_by(tdoc.children, 
-                                                       function(a)
-                            {
-                              return a.basename;
-                            });
-                            var match = by_basename[basename];
-                            if (typeof match == "undefined")
-                            {
-                              $("#main_body").text("Nothing at path: " + path);
-                            }
-                            else
-                            {
-                              var blob_id = get1(by_basename[basename])._id;
-                              $.get(app.db.uri + $.couch.encodeDocId(blob_id),
-                                    {}, function(bdoc) 
-                              {
-                                console.debug(boc);
-                              });
-                            }
-                          }, "json");
-                        }
-                        else
-                        {
-                          $("#main_body").text("TODO: Recursive traversal");
-                        }
-                      }, "json");
-                    }, "json");*/
+                    console.debug("Here");
                   }
                 }, "json");
               }
