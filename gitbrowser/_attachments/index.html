@@ -75,17 +75,16 @@
             var branch_name = show_url.substring(0, slash_index);
             var url_remainder = trim_prefix(show_url, branch_name + "/");
             var slash_index = url_remainder.indexOf("/");
-            var revision = url_remainder.substring(0, slash_index);
-            console.debug([show_url, branch_name, url_remainder, revision,
-      trim_prefix("abc", "ab"), trim_prefix("a/b/c", "a/")]);
-            if (revision == "head")
+            if (slash_index == -1)
             {
-              if (slash_index == -1)
+              $("#main_body").text("Sorry, invalid URL?");
+            }
+            else
+            {
+              var revision = url_remainder.substring(0, slash_index);
+              if (revision == "head")
               {
-                $("#main_body").text("Sorry, invalid URL?");
-              }
-              else
-              {
+                var path = trim_prefix(url_remainder, revision + "/");
                 $.get(app.db.uri + $.couch.encodeDocId("git-branches"),
                       {}, function(doc)
                 {
@@ -106,14 +105,39 @@
                       $.get(app.db.uri + $.couch.encodeDocId(bdoc.commit._id),
                             {}, function(cdoc) 
                       {
-                        $.get(app.db.uri + $.couch.encodeDocId(cdoc.tree._id),
-                            {}, function(tdoc) 
+                        var slash_index = path.indexOf("/");
+                        if (slash_index == -1)
                         {
-                          for (var i = 0; i < tdoc.children.length; i++)
+                          var basename = path.substring(o, slash_index);
+                          $.get(app.db.uri 
+                                + $.couch.encodeDocId(cdoc.tree._id), {}, 
+                                function(tdoc) 
                           {
-                            //if (
-                          }
-                        }, "json");
+                            var by_basename = group_by(tdoc.children, 
+                                                       function(a),
+                            {
+                              return a.basename;
+                            });
+                            var match = by_basename[basename];
+                            if (typeof match == "undefined")
+                            {
+                              $("#main_body").text("Nothing at path: " + path);
+                            }
+                            else
+                            {
+                              var blob_id = get1(by_basename[basename])._id;
+                              $.get(app.db.uri + $.couch.encodeDocId(blob_id),
+                                    {}, function(bdoc) 
+                              {
+                                console.debug(boc);
+                              });
+                            }
+                          }, "json");
+                        }
+                        else
+                        {
+                          $("#main_body").text("TODO: Recursive traversal");
+                        }
                       }, "json");
                     }, "json");
                   }
