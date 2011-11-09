@@ -105,11 +105,11 @@
                       $.get(app.db.uri + $.couch.encodeDocId(bdoc.commit._id),
                             {}, function(cdoc) 
                       {
-                        var slash_index = path.indexOf("/");
+                        /*var slash_index = path.indexOf("/");
                         if (slash_index == -1)
                         {
                           var basename = path.substring(o, slash_index);
-                          /*$.get(app.db.uri 
+                          $.get(app.db.uri 
                                 + $.couch.encodeDocId(cdoc.tree._id), {}, 
                                 function(tdoc) 
                           {
@@ -132,18 +132,18 @@
                                 console.debug(boc);
                               });
                             }
-                          }, "json");*/
+                          }, "json");
                         }
                         else
                         {
                           $("#main_body").text("TODO: Recursive traversal");
-                        }
+                        }*/
                       }, "json");
                     }, "json");
                   }
                 }, "json");
               }
-            
+            }
             else
             {
               $("#main_body").text("Must go to head revision for now");
