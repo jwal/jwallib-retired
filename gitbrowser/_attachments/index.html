@@ -118,7 +118,6 @@
                             {
                               return a.basename;
                             });
-                            console.debug(by_basename, basename);
                             var match = by_basename[basename];
                             if (typeof match == "undefined")
                             {
@@ -131,8 +130,14 @@
                               $.get(app.db.uri + $.couch.encodeDocId(blob_id),
                                     {}, function(bdoc) 
                               {
-                                if (true)
+                                if (bdoc.encoding == "raw")
                                 {
+                                  $("#main_body").text(bdoc.raw);
+                                }
+                                else
+                                {
+                                  $("#main_body").text("File may be binary: "
+                                                       + path);
                                 }
                               });
                             }
