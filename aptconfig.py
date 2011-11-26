@@ -4,6 +4,8 @@
 %prog [options] [JSON_CONFIG]
 """
 
+from jwalutil import trim
+from process import call
 import json
 import optparse
 import subprocess
@@ -11,7 +13,7 @@ import sys
 
 DEFAULT_CONFIG = {
         "mirror": "http://archive.ubuntu.com/ubuntu",
-        "distribution": "oneiric",
+        "distribution": None,
         "components": [
                 "main",
                 "universe",
@@ -91,6 +93,9 @@ def main(argv):
     custom = json.loads(custom_json)
     for key, value in defaults.items():
         custom.setdefault(key, value)
+    if custom["distribution"] is None:
+        custom["distribution"] = trim(
+            call(["lsb_release", "--short", "--codename"]), suffix="\r\n")
     output = render_to_sources_list(custom)
     if options.do_install:
         assert "\0" not in options.basename and "/" not in options.basename,\
