@@ -12,6 +12,21 @@
   </body>
   <script src="vendor/couchapp/loader.js"></script>
   <script type="text/javascript" charset="utf-8">
+    function hexdump(b64data)
+    {
+      var keys = ("ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                  + "abcdefghijklmnopqrstuvwxyz"
+                  + "0123456789+/=");
+      var result = "";
+      var line = 0;
+      var line_width = 2;
+      var block_width = 8;
+      while (true)
+      {
+        break;
+      }
+      return result;
+    }
     function startswith(string, prefix)
     {
       return (string.length >= prefix.length 
@@ -138,7 +153,8 @@
                                 else
                                 {
                                   $("#main_body").text("File may be binary: "
-                                                       + path);
+                                                       + path + "\r\n"
+                                                       + hexdump(bdoc.base64));
                                 }
                               });
                             }
