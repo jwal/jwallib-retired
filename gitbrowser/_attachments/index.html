@@ -12,8 +12,45 @@
   </body>
   <script src="vendor/couchapp/loader.js"></script>
   <script type="text/javascript" charset="utf-8">
+    function b64decode(b64data) {
+
+      /* Nod to http://www.webtoolkit.info/javascript-base64.html */
+
+      var keys = ("ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                  + "abcdefghijklmnopqrstuvwxyz"
+                  + "0123456789+/");
+      var output = [];
+      var chr1, chr2, chr3;
+      var enc1, enc2, enc3, enc4;
+      var i = 0;
+      var input = b64data.replace(/[^A-Za-z0-9\+\/]/g, "");
+      while (i < input.length)
+      {
+        enc1 = keys.indexOf(input.charAt(i++));
+        enc2 = keys.indexOf(input.charAt(i++));
+        chr1 = (enc1 << 2) | (enc2 >> 4);
+        output.push(chr1);
+        if (input.length == i)
+        {
+          break;
+        }
+        enc3 = keys.indexOf(input.charAt(i++));
+        chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
+        output.push(chr2);
+        if (input.length == i)
+        {
+          break;
+        }
+        enc4 = keys.indexOf(input.charAt(i++));	       
+        chr3 = ((enc3 & 3) << 6) | enc4;
+        output.push(chr3);
+      }
+      return output;
+    }
     function hexdump(b64data)
     {
+      console.debug(b64decode(b64data));
+      var b64data = b64data.replace(/[^A-Za-z0-9\+\/\=]/g, "");
       var keys = ("ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                   + "abcdefghijklmnopqrstuvwxyz"
                   + "0123456789+/");
@@ -26,7 +63,6 @@
       while (true)
       {
         var block = (remaining.substring(0, 4) + "==").substring(0, 4);
-        alert(block);
         break;
       }
       var result = hex_result + str_result;
@@ -133,8 +169,6 @@
                                 + $.couch.encodeDocId(cdoc.tree._id), {}, 
                                 function(tdoc) 
                           {
-                            console.debug(tdoc);
-                            console.debug(typeof tdoc);
                             var by_basename = group_by(tdoc.children, 
                                                        function(a)
                             {
@@ -152,8 +186,6 @@
                               $.get(app.db.uri + $.couch.encodeDocId(blob_id),
                                     {}, function(bdoc) 
                               {
-                                console.debug(bdoc);
-                                console.debug(typeof bdoc);
                                 if (bdoc.encoding == "raw")
                                 {
                                   $("#main_body").html(
