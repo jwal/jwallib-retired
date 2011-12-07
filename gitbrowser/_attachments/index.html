@@ -156,7 +156,9 @@
                                 console.debug(typeof bdoc);
                                 if (bdoc.encoding == "raw")
                                 {
-                                  $("#main_body").text(bdoc.raw);
+                                  $("#main_body").html(
+                                    '<pre id="blob_data"></pre>');
+                                  $("#blob_data").text(bdoc.raw);
                                 }
                                 else
                                 {
