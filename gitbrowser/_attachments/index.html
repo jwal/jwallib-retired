@@ -55,7 +55,11 @@
       var result = [];
       var flush = function()
       {
-        result.push(hex_result.join(" ") + " |" 
+        var hex_part = hex_result.join(" ");
+        var hex_part = (
+          hex_part.substr(0, Math.floor(hex_part.length / 2)) + " " 
+          + hex_part.substr(Math.floor(hex_part.length / 2), hex_part.length));
+        result.push(hex_part + " |" 
                     + str_result.join("") + "|\r\n");
         hex_result.splice(0, hex_result.length);
         str_result.splice(0, str_result.length);
