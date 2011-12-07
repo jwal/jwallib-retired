@@ -53,6 +53,7 @@
       var hex_result = [];
       var str_result = [];
       var result = [];
+      var i;
       var flush = function()
       {
         var hex_part = hex_result.join(" ");
@@ -70,7 +71,7 @@
         hex_result.splice(0, hex_result.length);
         str_result.splice(0, str_result.length);
       }
-      for (var i = 0; i < charcodes.length; i++)
+      for (i = 0; i < charcodes.length; i++)
       {
         var code = charcodes[i];
         hex_result.push(("0" + code.toString(16)).substring(-2, 2));
