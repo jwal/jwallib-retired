@@ -59,7 +59,7 @@
         hex_result.push(code.toString(16));
         if (code >= 32 && code <= 126)
         {
-          str_result.push(String.fromCharCode(code));
+          str_result.push("0" + String.fromCharCode(code).substring(-2, 2));
         }
         else
         {
