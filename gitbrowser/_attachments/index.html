@@ -150,6 +150,7 @@
                                     {}, function(bdoc) 
                               {
                                 console.debug(bdoc);
+                                console.debug(bdoc.encoding);
                                 if (bdoc.encoding == "raw")
                                 {
                                   $("#main_body").text(bdoc.raw);
