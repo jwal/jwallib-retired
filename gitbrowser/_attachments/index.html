@@ -56,9 +56,10 @@
       var flush = function()
       {
         var hex_part = hex_result.join(" ");
-        var hex_part_length = 3*16;
-        var hex_part = hex_part + (" " * hex_part_length);
-        var hex_part = hex_part.substr(0, hex_part_length);
+        var hex_part_padding =  ("                        "
+                                 + "                        ")
+        var hex_part = hex_part + hex_part_padding;
+        var hex_part = hex_part.substr(0, hex_part_padding.length);
         var hex_part = (
           hex_part.substr(0, Math.floor(hex_part.length / 2)) + " " 
           + hex_part.substr(Math.floor(hex_part.length / 2), hex_part.length));
