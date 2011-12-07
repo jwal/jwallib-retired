@@ -53,6 +53,13 @@
       var hex_result = [];
       var str_result = [];
       var result = [];
+      var flush = function()
+      {
+        result.push(hex_result.join(" ") + " |" 
+                    + str_result.join("") + "|\r\n");
+        hex_result.splice(0, hex_result.length);
+        str_result.splice(0, hex_result.length);
+      }
       for (var i = 0; i < charcodes.length; i++)
       {
         var code = charcodes[i];
@@ -67,12 +74,10 @@
         }
         if (i % 16 == 15)
         {
-          result.push(hex_result.join(" ") + " |" 
-                      + str_result.join("") + "|\r\n");
-          hex_result = [];
-          str_result = [];
+          flush();
         }
       }
+      flush();
       return result.join("");
     }
     function startswith(string, prefix)
