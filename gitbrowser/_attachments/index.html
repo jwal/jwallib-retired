@@ -63,7 +63,9 @@
         var hex_part = (
           hex_part.substr(0, Math.floor(hex_part.length / 2)) + " " 
           + hex_part.substr(Math.floor(hex_part.length / 2), hex_part.length));
-        result.push(hex_part + " |" 
+        var line_id = "00000000" + (i - str_result.length).toString(16);
+        var line_id = line_id.substring(-8, 8);
+        result.push(line_id + "  " + hex_part + " |" 
                     + str_result.join("") + "|\r\n");
         hex_result.splice(0, hex_result.length);
         str_result.splice(0, str_result.length);
