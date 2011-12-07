@@ -14,16 +14,19 @@
   <script type="text/javascript" charset="utf-8">
     function hexdump(b64data)
     {
-      alert("hexdumping");
       var keys = ("ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                   + "abcdefghijklmnopqrstuvwxyz"
-                  + "0123456789+/=");
-      var result = "";
+                  + "0123456789+/");
+      var hex_result = "";
+      var str_result = "";
       var line = 0;
       var line_width = 2;
       var block_width = 8;
+      var remaining = b64data;
       while (true)
       {
+        var block = (remaining.subsring(0, 4) + "==").substring(0, 4);
+        alert(block);
         break;
       }
       return result;
