@@ -52,6 +52,7 @@
       var charcodes = b64decode(b64data);
       var hex_result = [];
       var str_result = [];
+      var result = [];
       for (var i = 0; i < charcodes.length; i++)
       {
         var code = charcodes[i];
@@ -63,6 +64,13 @@
         else
         {
           str_result.push(".");
+        }
+        if (i % 16 = 0)
+        {
+          result.push(hex_result.join(" ") + " |" 
+                      + str_result.join("") + "|\r\n");
+          hex_result = [];
+          str_result = [];
         }
       }
       var result = hex_result.join(" ") + " -- " + str_result.join("");
