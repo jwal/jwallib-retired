@@ -89,7 +89,9 @@
         }
       }
       flush();
-      flush();
+      var line_id = "00000000" + (i - str_result.length).toString(16);
+      var line_id = line_id.substring(line_id.length - 8);
+      result.push(line_id);
       return result.join("");
     }
     function startswith(string, prefix)
