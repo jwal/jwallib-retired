@@ -194,10 +194,12 @@
                                 }
                                 else
                                 {
-			          console.debug(bdoc._id);
-                                  $("#main_body").text("File may be binary: "
-                                                       + path + "\r\n"
-                                                       + hexdump(bdoc.base64));
+                                  $("#main_body").html(
+                                    '<p>File may be binary: '
+			            + '<span id="filepath"></span>'
+                                    + '<pre id="blob_data"></pre>');
+                                  $("#filepath").text(path);
+                                  $("#blob_data").text(hexdump(bdoc.base64))
                                 }
                               }, "json");
                             }
