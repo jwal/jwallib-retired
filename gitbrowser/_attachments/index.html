@@ -132,6 +132,8 @@
                                 + $.couch.encodeDocId(cdoc.tree._id), {}, 
                                 function(tdoc) 
                           {
+                            console.debug(tdoc);
+                            console.debug(typeof tdoc);
                             var by_basename = group_by(tdoc.children, 
                                                        function(a)
                             {
