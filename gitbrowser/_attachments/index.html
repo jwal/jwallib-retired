@@ -49,23 +49,23 @@
     }
     function hexdump(b64data)
     {
-      console.debug(b64decode(b64data));
-      var b64data = b64data.replace(/[^A-Za-z0-9\+\/\=]/g, "");
-      var keys = ("ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                  + "abcdefghijklmnopqrstuvwxyz"
-                  + "0123456789+/");
-      var hex_result = "";
-      var str_result = "";
-      var line = 0;
-      var line_width = 2;
-      var block_width = 8;
-      var remaining = b64data;
-      while (true)
+      var charcodes = b64decode(b64data);
+      var hex_result = [];
+      var str_result = [];
+      for (var i = 0; i < charcodes.length; i++)
       {
-        var block = (remaining.substring(0, 4) + "==").substring(0, 4);
-        break;
+        var code = charcodes[i];
+        hex_result.push(code.toStrin(16));
+        if (code >= 32 && code <= 126)
+        {
+          str_result.push(String.fromCharCode(code));
+        }
+        else
+        {
+          str_result.push(".");
+        }
       }
-      var result = hex_result + str_result;
+      var result = hex_result.join(" ") + " -- " + str_result.join("");
       return result;
     }
     function startswith(string, prefix)
