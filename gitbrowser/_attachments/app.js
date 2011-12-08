@@ -255,6 +255,7 @@ function process_hashchange()
     $("#main_body").html("<em>Loading...</em>");
     if (startswith(location.hash, "#show/"))
     {
+	throw new Error("fail");
 	console.debug("asked to show", trim_prefix(location.hash, "#show/"));
 	var path = split_path(trim_prefix(location.hash, "#show/"));
 	console.debug(path);
