@@ -140,6 +140,7 @@ function split_path(path_string)
     	var remainder = remainder.substring(slash_index);
 	break; /* fixme */
     }
+    console.debug(remainder, path, path_string);
     var result = [];
     for (var i = 0; i < path.length; i++)
     {
