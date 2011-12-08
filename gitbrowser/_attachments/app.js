@@ -143,16 +143,16 @@ function split_path(path_string)
     var decoded_path = [];
     for (var j = 0; j < path.length; j++)
     {
-	var decoded = decodeURIComponent(path[j]);
-	if (decoded.length == 0)
-	{
-	    throw new Error("Path component seems to contain an empty string"
-			    + ": " + path_string);
-	}
-	console.debug("push", decoded);
-	decoded_path.push(decoded);
-	decoded_path.push(decoded);
-	decoded_path.push(decoded);
+	// var decoded = decodeURIComponent(path[j]);
+	// if (decoded.length == 0)
+	// {
+	//     throw new Error("Path component seems to contain an empty string"
+	// 		    + ": " + path_string);
+	// }
+	// console.debug("push", decoded);
+	// decoded_path.push(decoded);
+	// decoded_path.push(decoded);
+	decoded_path.push(j);
     }
     console.debug("decoded j", decoded_path);
     return decoded_path;
