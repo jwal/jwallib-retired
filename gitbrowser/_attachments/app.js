@@ -150,6 +150,18 @@ function split_path(path_string)
     }
     return decoded_path;
 }
+function make_show_url(branch_name, revision, path)
+{
+    var result = [];
+    result.push("show");
+    result.push(encodeURIComponent(branch_name));
+    result.push(encodeURIComponent(revision));
+    for (var i = 0; i < path.length; i++)
+    {
+	result.push(encodeURIComponent(path[i]));
+    }
+    return "#" + (result.join("/"));
+}
 function show_file_or_folder(app, branch_name, revision, path)
 {
     if (revision != "head")
@@ -182,15 +194,7 @@ function show_file_or_folder(app, branch_name, revision, path)
 	}
 	else if (doc.type == "git-tree")
 	{
-	    $("#main_body").html(
-		"<h2>Git Tree <span "
-		    + "class=\"tree_sha\"></span></h2>"
-		    + "<pre class=\"commit_message\"></pre>"
-		    + "<p>SHA: <a class=\"tree_sha\"></a></p>"
-		    + "<p>Entries:</p><table "
-		    + "id=\"entries_list\"></table>"
-	    );
-	    $(".tree_sha").text(doc.sha);
+	    $("#main_body").html("<table id=\"entries_list\"></table>");
 	    for (var i = 0; i < doc.children.length; i++)
 	    {
 		var li = $("<tr></tr>");
@@ -205,7 +209,10 @@ function show_file_or_folder(app, branch_name, revision, path)
 		var sha_cell = $("<td style=\"font-family: "
 				 + "monospace;\"></td>");
 		var a = $("<a></a>");
-		a.attr("href", "#" + doc.children[i].child._id);
+		var child_path = path.slice();
+		child_path.push(basename);
+		a.attr("href", make_show_url(branch_name, revision, 
+					     child_path));
 		a.text(doc.children[i].child.sha);
 		sha_cell.append(a);
 		li.append(sha_cell);
