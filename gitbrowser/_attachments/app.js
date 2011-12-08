@@ -55,8 +55,12 @@ function hexdump(b64data)
         var line_id = line_id.substring(line_id.length - 8);
 	if (hex_part.length > 0)
 	{
-            result.push(line_id + "  " + hex_part + " |" 
+            result.push(line_id + "  " + str_part + " |" 
 			+ str_result.join("") + "|\r\n");
+	}
+	else
+	{
+	    console.debug("skip");
 	}
         hex_result.splice(0, hex_result.length);
         str_result.splice(0, str_result.length);
