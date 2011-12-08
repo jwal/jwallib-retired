@@ -127,18 +127,19 @@ function split_path(path_string)
     var remainder = path_string;
     var path = [];
     var separator = "/";
-    // while (true)
-    // {
-    // 	console.debug("iteration", remainder);
-    // 	var slash_index = remainder.indexOf("/");
-    // 	if (slash_index == -1)
-    // 	{
-    // 	    path.push(remainder);
-    // 	    break;
-    // 	}
-    // 	path.push(remainder.substring(0, slash_index));
-    // 	var remainder = remainder.substring(slash_index);
-    // }
+    while (true)
+    {
+    	console.debug("iteration", remainder);
+    	var slash_index = remainder.indexOf("/");
+    	if (slash_index == -1)
+    	{
+    	    path.push(remainder);
+    	    break;
+    	}
+    	path.push(remainder.substring(0, slash_index));
+    	var remainder = remainder.substring(slash_index);
+	break; /* fixme */
+    }
     var result = [];
     for (var i = 0; i < path.length; i++)
     {
