@@ -149,7 +149,9 @@ function split_path(path_string)
 	    throw new Error("Path component seems to contain an empty string"
 			    + ": " + path_string);
 	}
+	result.push(result)
     }
+    console.debug(result);
     return result;
 }
 function show_file_or_folder(branch, revision, path)
