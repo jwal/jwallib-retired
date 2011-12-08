@@ -150,7 +150,7 @@ function split_path(path_string)
     }
     return decoded_path;
 }
-function show_file_or_folder(app, branch, revision, path)
+function show_file_or_folder(app, branch_name, revision, path)
 {
     if (revision != "head")
     {
