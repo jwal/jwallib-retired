@@ -144,17 +144,13 @@ function split_path(path_string)
     for (var j = 0; j < path.length; j++)
     {
 	var decoded = decodeURIComponent(path[j]);
-	// if (decoded.length == 0)
-	// {
-	//     throw new Error("Path component seems to contain an empty string"
-	// 		    + ": " + path_string);
-	// }
-	console.debug("push", j);
-	// decoded_path.push(decoded);
-	// decoded_path.push(decoded);
+	if (decoded.length == 0)
+	{
+	    throw new Error("Path component seems to contain an empty string"
+			    + ": " + path_string);
+	}
 	decoded_path.push(decoded);
     }
-    console.debug("decoded j" + decoded_path);
     return decoded_path;
 }
 function show_file_or_folder(branch, revision, path)
@@ -262,7 +258,7 @@ function process_hashchange()
     {
 	console.debug("asked to show", trim_prefix(location.hash, "#show/"));
 	var path = split_path(trim_prefix(location.hash, "#show/"));
-	console.debug(path);
+	console.debug("" + path);
 	if (path.length == 0)
 	{
 	    throw new Error("Not enough path (missing branch): " + path);
