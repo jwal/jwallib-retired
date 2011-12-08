@@ -256,6 +256,7 @@ function process_hashchange()
     if (startswith(location.hash, "#show/"))
     {
 	var path = split_path(trim_prefix(location.hash, "#show/"));
+	console.debug(path);
 	if (path.length == 0)
 	{
 	    throw new Error("Not enough path (missing branch): " + path);
