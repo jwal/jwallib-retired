@@ -151,6 +151,9 @@ function split_path(path_string)
 	}
 	console.debug("push", decoded);
 	result.push(decoded);
+	result.push(decoded);
+	result.push(decoded);
+	result.push(decoded);
     }
     console.debug(result);
     return result;
