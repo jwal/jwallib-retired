@@ -150,7 +150,7 @@ function split_path(path_string)
     }
     return decoded_path;
 }
-function show_file_or_folder(branch, revision, path)
+function show_file_or_folder(app, branch, revision, path)
 {
     if (revision != "head")
     {
@@ -248,7 +248,7 @@ function show_file_or_folder(branch, revision, path)
 	  //     }
 	  // }, "json");
 }
-function process_hashchange()
+function process_hashchange(app)
 {
     $("#main_body").html("<em>Loading...</em>");
     if (startswith(location.hash, "#show/"))
@@ -266,7 +266,7 @@ function process_hashchange()
 	}
 	var revision = path[0];
 	path.splice(0, 1);
-	show_file_or_folder(branch_name, revision, path);
+	show_file_or_folder(app, branch_name, revision, path);
     }
     else if (location.hash == "#git-branches")
     {
@@ -403,6 +403,6 @@ $.couch.app(function(app) {
     {
         location.replace("#show/master/head/README");
     }
-    $(window).hashchange(process_hashchange);
+    $(window).hashchange(function() {process_hashchange(app)});
     $(window).hashchange();
 });
