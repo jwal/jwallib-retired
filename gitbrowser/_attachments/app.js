@@ -143,7 +143,7 @@ function split_path(path_string)
     var decoded_path = [];
     for (var j = 0; j < path.length; j++)
     {
-	// var decoded = decodeURIComponent(path[j]);
+	var decoded = decodeURIComponent(path[j]);
 	// if (decoded.length == 0)
 	// {
 	//     throw new Error("Path component seems to contain an empty string"
@@ -152,7 +152,7 @@ function split_path(path_string)
 	console.debug("push", j);
 	// decoded_path.push(decoded);
 	// decoded_path.push(decoded);
-	decoded_path.push(j);
+	decoded_path.push(decoded);
     }
     console.debug("decoded j" + decoded_path);
     return decoded_path;
