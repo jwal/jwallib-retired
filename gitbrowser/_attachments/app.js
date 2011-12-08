@@ -154,7 +154,7 @@ function split_path(path_string)
 	// decoded_path.push(decoded);
 	decoded_path.push(j);
     }
-    console.debug("decoded j", decoded_path);
+    console.debug("decoded j" + decoded_path);
     return decoded_path;
 }
 function show_file_or_folder(branch, revision, path)
