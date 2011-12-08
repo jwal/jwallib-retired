@@ -408,6 +408,6 @@ $.couch.app(function(app) {
     {
         location.replace("#show/master/head/README");
     }
-    $(window).hashchange(function() {});
+    $(window).hashchange(process_hashchange);
     $(window).hashchange();
 });
