@@ -210,7 +210,7 @@ function show_file_or_folder(app, branch_name, revision, path)
 				 + "monospace;\"></td>");
 		var a = $("<a></a>");
 		var child_path = path.slice();
-		child_path.push(basename);
+		child_path.push(doc.children[i].basename);
 		a.attr("href", make_show_url(branch_name, revision, 
 					     child_path));
 		a.text(doc.children[i].child.sha);
