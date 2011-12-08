@@ -158,7 +158,26 @@ function show_file_or_folder(app, branch_name, revision, path)
     }
     function render_tree_or_blob(doc)
     {
-	console.debug("rendering", doc);
+	{
+	    if (doc.encoding == "raw")
+	    {
+	  	$("#main_body").html('<pre id="blob_data"></pre>');
+	  	$("#blob_data").text(doc.raw);
+	    }
+	    else if (doc.encoding == "base64")
+	    {
+	  	$("#main_body").html(
+	  	    '<p>File may be binary: '
+	  		+ '<span id="filepath"></span>'
+	  		+ '<pre id="blob_data"></pre>');
+	  	$("#filepath").text(path);
+	  	$("#blob_data").text(hexdump(bdoc.base64));
+	    }
+	    else
+	    {
+		throw new Error("Don't know how to render: " + doc);
+	    }
+	}
     }
     function handle_tree_or_blob(doc, remaining_path)
     {
