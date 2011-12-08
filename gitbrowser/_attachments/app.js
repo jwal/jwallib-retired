@@ -149,6 +149,7 @@ function split_path(path_string)
 	    throw new Error("Path component seems to contain an empty string"
 			    + ": " + path_string);
 	}
+	console.debug("push", decoded);
 	result.push(decoded);
     }
     console.debug(result);
