@@ -350,15 +350,15 @@ function process_hashchange()
 		  {
 		      var li = $("<tr></tr>");
 		      var mode_span = $("<td style=\"font-family: "
-					"monospace;\"></td>");
+					+ "monospace;\"></td>");
 		      mode_span.text(doc.children[i].mode);
 		      li.append(mode_span);
 		      var basename_span = $("<th style=\"text-align: "
-					    "left;\"></th>");
+					    + "left;\"></th>");
 		      basename_span.text(doc.children[i].basename);
 		      li.append(basename_span);
 		      var sha_cell = $("<td style=\"font-family: "
-				       "monospace;\"></td>");
+				       + "monospace;\"></td>");
 		      var a = $("<a></a>");
 		      a.attr("href", "#" + doc.children[i].child._id);
 		      a.text(doc.children[i].child.sha);
