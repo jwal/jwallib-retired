@@ -184,7 +184,7 @@ function show_file_or_folder(app, branch_name, revision, path)
 	  		+ '<span id="filepath"></span>'
 	  		+ '<pre id="blob_data"></pre>');
 		$("#filepath").text(path);
-		$("#blob_data").text(hexdump(bdoc.base64));
+		$("#blob_data").text(hexdump(doc.base64));
 	    }
 	    else
 	    {
