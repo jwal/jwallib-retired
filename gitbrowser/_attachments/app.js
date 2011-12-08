@@ -137,7 +137,7 @@ function split_path(path_string)
     	    break;
     	}
     	path.push(remainder.substring(0, slash_index));
-    	var remainder = remainder.substring(slash_index);
+    	var remainder = remainder.substring(slash_index + 1);
     }
     console.debug(remainder, path, path_string);
     var result = [];
