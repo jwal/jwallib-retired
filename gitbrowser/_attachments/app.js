@@ -127,7 +127,8 @@ function split_path(path_string)
     var path = [];
     var separator = "/";
     while (true)
-    {	
+    {
+	console.debug("iteration", remainder);
 	var slash_index = remainder.indexOf("/");
 	if (slash_index == -1)
 	{
@@ -137,7 +138,7 @@ function split_path(path_string)
 	else
 	{
 	    path.push(remainder.substring(0, slash_index));
-	    remainder = remainder.substring(slash_index);
+	    var remainder = remainder.substring(slash_index);
 	}
     }
     var result = [];
