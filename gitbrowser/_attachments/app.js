@@ -184,7 +184,7 @@ function show_file_or_folder(app, branch_name, revision, path)
 	{
 	    next_remainder.push(remaining_path[i]);
 	}
-	$.get(app.db.uri + $.couch.encodeDocId(blob_id), {}, 
+	$.get(app.db.uri + $.couch.encodeDocId(child_id), {}, 
 	      function(d) {return handle_tree_or_blob(d, next_remainder)},
 	      "json");
     }
