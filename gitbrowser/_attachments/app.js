@@ -255,7 +255,7 @@ function process_hashchange()
     $("#main_body").html("<em>Loading...</em>");
     if (startswith(location.hash, "#show/"))
     {
-	var path = split_path(trim_prefix(location.hash, "#show/"););
+	var path = split_path(trim_prefix(location.hash, "#show/"));
 	if (path.length == 0)
 	{
 	    throw new Error("Not enough path (missing branch): " + path);
