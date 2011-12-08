@@ -173,21 +173,28 @@ function show_file_or_folder(app, branch_name, revision, path)
     }
     function render_tree_or_blob(doc)
     {
+	var body = $("<div></div>");
+	if (path.length > 0)
+	{
+	    var up_path = path.slice(0, path.length - 1);
+	    var up_link = $("<a>[up]</a>");
+	    up_link.attr("href", make_show_url(branch_name, revision,
+					       up_path));
+	    body.append(up_link);
+	}
 	if (doc.type == "git-blob")
 	{
 	    if (doc.encoding == "raw")
 	    {
-		$("#main_body").html('<pre id="blob_data"></pre>');
-		$("#blob_data").text(doc.raw);
+		var pre = $('<pre></pre>');
+		pre.text(doc.raw);
+		body.append(pre);
 	    }
 	    else if (doc.encoding == "base64")
 	    {
-		$("#main_body").html(
-	  	    '<p>File may be binary: '
-	  		+ '<span id="filepath"></span>'
-	  		+ '<pre id="blob_data"></pre>');
-		$("#filepath").text(path);
-		$("#blob_data").text(hexdump(doc.base64));
+		var pre = $('<pre></pre>');
+		pre.text(hexdump(doc.base64));
+		body.append(pre);
 	    }
 	    else
 	    {
@@ -197,7 +204,7 @@ function show_file_or_folder(app, branch_name, revision, path)
 	}
 	else if (doc.type == "git-tree")
 	{
-	    $("#main_body").html("<table id=\"entries_list\"></table>");
+	    var table = $("<table></table>");
 	    for (var i = 0; i < doc.children.length; i++)
 	    {
 		var li = $("<tr></tr>");
@@ -219,8 +226,11 @@ function show_file_or_folder(app, branch_name, revision, path)
 		a.text(doc.children[i].child.sha);
 		sha_cell.append(a);
 		li.append(sha_cell);
-		$("#entries_list").append(li);
-	    }	    
+		table.append(li);
+	    }
+	    body.append(table);
+	    $("#main_body").text();
+	    $("#main_body").append(body)
 	}
 	else
 	{
