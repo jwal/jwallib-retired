@@ -180,6 +180,38 @@ function show_file_or_folder(app, branch_name, revision, path)
 				+ doc.encoding);
 	    }
 	}
+	else if (doc.type == "git-tree")
+	{
+	    $("#main_body").html(
+		"<h2>Git Tree <span "
+		    + "class=\"tree_sha\"></span></h2>"
+		    + "<pre class=\"commit_message\"></pre>"
+		    + "<p>SHA: <a class=\"tree_sha\"></a></p>"
+		    + "<p>Entries:</p><table "
+		    + "id=\"entries_list\"></table>"
+	    );
+	    $(".tree_sha").text(doc.sha);
+	    for (var i = 0; i < doc.children.length; i++)
+	    {
+		var li = $("<tr></tr>");
+		var mode_span = $("<td style=\"font-family: "
+				  + "monospace;\"></td>");
+		mode_span.text(doc.children[i].mode);
+		li.append(mode_span);
+		var basename_span = $("<th style=\"text-align: "
+				      + "left;\"></th>");
+		basename_span.text(doc.children[i].basename);
+		li.append(basename_span);
+		var sha_cell = $("<td style=\"font-family: "
+				 + "monospace;\"></td>");
+		var a = $("<a></a>");
+		a.attr("href", "#" + doc.children[i].child._id);
+		a.text(doc.children[i].child.sha);
+		sha_cell.append(a);
+		li.append(sha_cell);
+		$("#entries_list").append(li);
+	    }	    
+	}
 	else
 	{
 	    throw new Error("Don't know how to render: " + doc.type);
@@ -238,40 +270,6 @@ function show_file_or_folder(app, branch_name, revision, path)
     }
     $.get(app.db.uri + $.couch.encodeDocId("git-branches"),
 	  {}, handle_branches, "json");
-
-
-
-						    
-	  // 						$.get(app.db.uri + $.couch.encodeDocId(blob_id),
-	  // 						      {}, function(bdoc) 
-	  // 						      {
-	  // 							  if (bdoc.encoding == "raw")
-	  // 							  {
-	  // 							      $("#main_body").html(
-	  // 								  '<pre id="blob_data"></pre>');
-	  // 							      $("#blob_data").text(bdoc.raw);
-	  // 							  }
-	  // 							  else
-	  // 							  {
-	  // 							      $("#main_body").html(
-	  // 								  '<p>File may be binary: '
-	  // 								      + '<span id="filepath"></span>'
-	  // 								      + '<pre id="blob_data"></pre>');
-	  // 							      $("#filepath").text(path);
-	  // 							      $("#blob_data").text(hexdump(bdoc.base64))
-	  // 							  }
-	  // 						      }, "json");
-	  // 					    }
-	  // 					}, "json");
-	  // 			      }
-	  // 			      else
-	  // 			      {
-	  // 				  $("#main_body").text("TODO: Recursive traversal");
-	  // 			      }
-	  // 			  }, "json");
-	  // 		}, "json");
-	  //     }
-	  // }, "json");
 }
 function process_hashchange(app)
 {
