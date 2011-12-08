@@ -141,9 +141,9 @@ function split_path(path_string)
     }
     console.debug(path, path_string);
     var decoded_path = [];
-    for (var i = 0; i < path.length; i++)
+    for (var j = 0; j < path.length; j++)
     {
-	var decoded = decodeURIComponent(path[i]);
+	var decoded = decodeURIComponent(path[j]);
 	if (decoded.length == 0)
 	{
 	    throw new Error("Path component seems to contain an empty string"
@@ -153,7 +153,7 @@ function split_path(path_string)
 	decoded_path.push(decoded);
 	decoded_path.push(decoded);
     }
-    console.debug("decoded", decoded_path);
+    console.debug("decoded j", decoded_path);
     return decoded_path;
 }
 function show_file_or_folder(branch, revision, path)
