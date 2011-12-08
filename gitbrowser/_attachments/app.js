@@ -49,7 +49,8 @@ function hexdump(b64data)
         var hex_part = hex_part.substr(0, hex_part_padding.length);
         var hex_part = (
             hex_part.substr(0, Math.floor(hex_part.length / 2)) + " " 
-		+ hex_part.substr(Math.floor(hex_part.length / 2), hex_part.length));
+		+ hex_part.substr(Math.floor(hex_part.length / 2), 
+				  hex_part.length));
         var line_id = "00000000" + (i - str_result.length + 1).toString(16);
         var line_id = line_id.substring(line_id.length - 8);
         result.push(line_id + "  " + hex_part + " |" 
@@ -120,6 +121,278 @@ function get1(items)
     }
     return items[0];
 }
+function split_path(path_string)
+{
+    var remainder = path_string;
+    var path = [];
+    var separator = "/";
+    while (true)
+    {	
+	var slash_index = remainder.indexOf("/");
+	if (slash_index == -1)
+	{
+	    path.push(remainder);
+	    break;
+	}
+	else
+	{
+	    path.push(remainder.substring(0, slash_index));
+	    remainder = remainder.substring(slash_index);
+	}
+    }
+    var result = [];
+    for (var i = 0; i < path.length; i++)
+    {
+	var decoded = decodeURIComponent(path[i]);
+	if (decoded.length == 0)
+	{
+	    throw new Error("Path component seems to contain an empty string"
+			    + ": " + path_string);
+	}
+    }
+    return result;
+}
+function show_file_or_folder(branch, revision, path)
+{
+    if (revision != "head")
+    {
+	throw new Error("Must be head revision, for now: " + revision);
+    }
+    function render_tree_or_blob(doc)
+    {
+	console.debug("rendering", doc);
+    }
+    function handle_tree_or_blob(doc, remaining_path)
+    {
+	if (remaining_path.length == 0)
+	{
+	    return render_tree_or_blob(doc);
+	}
+	if (doc.type != "git-tree")
+	{
+	    throw new Error("Needed a tree to recurse: " + remaining_path);
+	}
+	var basename = remaining_path[0];
+	var by_basename = group_by(
+	    tdoc.children, function(a) {return a.basename});
+	var match = by_basename[basename];
+	if (typeof match == "undefined")
+	{
+	    throw new Error("Nothing at path: " + path);
+	}
+	var child_id = get1(by_basename[basename]).child._id;
+	var next_remainder = [];
+	for (var i = 1; i < remaining_path.length; i++)
+	{
+	    next_remainder.push(remaining_path[i]);
+	}
+	$.get(app.db.uri + $.couch.encodeDocId(blob_id), {}, 
+	      function(d) {return handle_tree_or_blob(d, next_remainder)},
+	      "json");
+    }
+    function handle_commit(doc)
+    {
+	$.get(app.db.uri + $.couch.encodeDocId(doc.tree._id),
+	      {}, function(d) {return handle_tree_or_blob(d, path)}, "json");
+    }
+    function handle_branch(doc)
+    {
+	$.get(app.db.uri + $.couch.encodeDocId(doc.commit._id),
+	      {}, handle_commit, "json");
+    }
+    function handle_branches(doc)
+    {
+	var found_it = false;
+	var by_name = group_by(doc.branches, function(b) {return b.branch});
+	var branches = by_name[branch_name];
+	if (typeof branches == "undefined")
+	{
+	    throw new Error("Missing branch: " + branch_name);
+	}
+	var branch = get1(branches);
+	$.get(app.db.uri + $.couch.encodeDocId(branch._id),
+	      {}, handle_branch, "json");
+    }
+    $.get(app.db.uri + $.couch.encodeDocId("git-branches"),
+	  {}, handle_branches, "json");
+
+
+
+						    
+	  // 						$.get(app.db.uri + $.couch.encodeDocId(blob_id),
+	  // 						      {}, function(bdoc) 
+	  // 						      {
+	  // 							  if (bdoc.encoding == "raw")
+	  // 							  {
+	  // 							      $("#main_body").html(
+	  // 								  '<pre id="blob_data"></pre>');
+	  // 							      $("#blob_data").text(bdoc.raw);
+	  // 							  }
+	  // 							  else
+	  // 							  {
+	  // 							      $("#main_body").html(
+	  // 								  '<p>File may be binary: '
+	  // 								      + '<span id="filepath"></span>'
+	  // 								      + '<pre id="blob_data"></pre>');
+	  // 							      $("#filepath").text(path);
+	  // 							      $("#blob_data").text(hexdump(bdoc.base64))
+	  // 							  }
+	  // 						      }, "json");
+	  // 					    }
+	  // 					}, "json");
+	  // 			      }
+	  // 			      else
+	  // 			      {
+	  // 				  $("#main_body").text("TODO: Recursive traversal");
+	  // 			      }
+	  // 			  }, "json");
+	  // 		}, "json");
+	  //     }
+	  // }, "json");
+}
+function process_hashchange()
+{
+    $("#main_body").html("<em>Loading...</em>");
+    if (startswith(location.hash, "#show/"))
+    {
+	var path = split_path(trim_prefix(location.hash, "#show/"););
+	if (path.length == 0)
+	{
+	    throw new Error("Not enough path (missing branch): " + path);
+	}
+	var branch_name = path[0];
+	path.splice(0, 1);
+	if (path.length == 0)
+	{
+	    throw new Error("Not enouugh path (missing revision): " + path);
+	}
+	var revision = path[0];
+	path.splice(0, 1);
+	show_file_or_folder(branch_name, revision, path);
+    }
+    else if (location.hash == "#git-branches")
+    {
+	$("#main_body").evently("branches", app);
+    }
+    else if (startswith(location.hash, "#git-branch-"))
+    {
+	var uri = (app.db.uri 
+		   + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
+	$.get(uri, {}, function(doc) {
+	    $("#main_body").html("<h2>Git Branch <span "
+				 + "id=\"branch_name\"></span></h2>"
+				 + "<p>Commit: <a id=\"commit_sha\"></a></p>");
+	    $("#branch_name").text(doc.branch);
+	    $("#commit_sha").text(doc.commit.sha);
+	    $("#commit_sha").attr("href", "#" + doc.commit._id);
+	}, "json");
+    }
+    else if (startswith(location.hash, "#git-commit-"))
+    {
+	var uri = (app.db.uri 
+		   + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
+	$.get(uri, {}, function(doc)
+	      {
+		  $("#main_body").html("<h2>Git Commit <span "
+				       + "class=\"commit_sha\"></span></h2>"
+				       + "<pre class=\"commit_message\"></pre>"
+				       + "<p>SHA: <a class=\"commit_sha\"></a></p>"
+				       + "<p>Author: <a class="
+				       + "\"commit_author_name\"></a> (<span "
+				       + "class=\"commit_author_date\"></span>)</p>"
+				       + "<p>Committer: <a class="
+				       + "\"committer_name\"></a> (<span "
+				       + "class=\"committer_date\"></span>)</p>"
+				       + "<p>Tree: <a id=\"tree_sha\"></a></p>"
+				       + "<p>Parents:</p><ul "
+				       + "id=\"parents_list\"></ul>"
+				      );
+		  $(".commit_sha").text(doc.sha);
+		  $(".commit_author_name").text(doc.author.name);
+		  $(".commit_author_name").attr("href", 
+						"mailto:" + doc.author.email);
+		  $(".commit_author_date").text(doc.author.date);
+		  $(".committer_name").text(doc.committer.name);
+		  $(".committer_name").attr("href", 
+					    "mailto:" + doc.committer.email);
+		  $(".committer_date").text(doc.committer.date);
+		  $(".commit_message").text(doc.message);
+		  $("#tree_sha").text(doc.tree.sha);
+		  $("#tree_sha").attr("href", "#" + doc.tree._id);
+		  for (var i = 0; i < doc.parents.length; i++)
+		  {
+		      var li = $("<li></li>");
+		      var a = $("<a></a>");
+		      a.attr("href", "#" + doc.parents[i]._id);
+		      a.text(doc.parents[i].sha);
+		      li.append(a);
+		      $("#parents_list").append(li);
+		  }
+	      }, "json");
+    }
+    else if (startswith(location.hash, "#git-tree-"))
+    {
+	var uri = (app.db.uri 
+		   + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
+	$.get(uri, {}, function(doc)
+	      {
+		  $("#main_body").html("<h2>Git Tree <span "
+				       + "class=\"tree_sha\"></span></h2>"
+				       + "<pre class=\"commit_message\"></pre>"
+				       + "<p>SHA: <a class=\"tree_sha\"></a></p>"
+				       + "<p>Entries:</p><table "
+				       + "id=\"entries_list\"></table>"
+				      );
+		  $(".tree_sha").text(doc.sha);
+		  for (var i = 0; i < doc.children.length; i++)
+		  {
+		      var li = $("<tr></tr>");
+		      var mode_span = $("<td style=\"font-family: monospace;\"></td>");
+		      mode_span.text(doc.children[i].mode);
+		      li.append(mode_span);
+		      var basename_span = $("<th style=\"text-align: left;\"></th>");
+		      basename_span.text(doc.children[i].basename);
+		      li.append(basename_span);
+		      var sha_cell = $("<td style=\"font-family: monospace;\"></td>");
+		      var a = $("<a></a>");
+		      a.attr("href", "#" + doc.children[i].child._id);
+		      a.text(doc.children[i].child.sha);
+		      sha_cell.append(a);
+		      li.append(sha_cell);
+		      $("#entries_list").append(li);
+		  }
+	      }, "json");
+    }
+    else if (startswith(location.hash, "#git-blob-"))
+    {
+        var uri = (app.db.uri 
+                   + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
+        $.get(uri, {}, function(doc) {
+	    $("#main_body").html("<h2>Git Blob <span "
+				 + "class=\"blob_sha\"></span></h2>"
+                                 + "<p>SHA: <a class=\"blob_sha\"></a></p>"
+				);
+	    if (doc.encoding == "raw")
+	    {
+		var pre = $("<pre></pre>");
+		pre.text(doc.raw);
+		$("#main_body").append(pre)
+	    }
+	    else
+	    {
+		$("#main_body").append("<p><em>Appears to be a "
+				       + "binary file</em><p>");
+	    }
+	    $(".blob_sha").text(doc.sha);
+        }, "json");
+    }
+    else
+    {
+        $("#main_body").html(
+	    '<em>Failed to load.  Try going ' + 
+		'<a href="javascript: history.go(-1)">back</a>.</em>');
+    }   
+}
 $.couch.app(function(app) {
     $("#account").evently("account", app);
     $.evently.connect("#account","#profile", ["loggedIn","loggedOut"]);
@@ -127,235 +400,6 @@ $.couch.app(function(app) {
     {
         location.replace("#show/master/head/README");
     }
-    $(window).hashchange(function() {
-        $("#main_body").html("<em>Loading...</em>");
-        if (startswith(location.hash, "#show/"))
-        {
-            $("#main_body").text("Loading...");
-            var show_url = trim_prefix(location.hash, "#show/");
-            var slash_index = show_url.indexOf("/");
-            if (slash_index == -1)
-            {
-		$("#main_body").text("Sorry, invalid URL?");
-            }
-            else
-            {
-		var branch_name = show_url.substring(0, slash_index);
-		var url_remainder = trim_prefix(show_url, branch_name + "/");
-		var slash_index = url_remainder.indexOf("/");
-		if (slash_index == -1)
-		{
-		    $("#main_body").text("Sorry, invalid URL?");
-		}
-		else
-		{
-		    var revision = url_remainder.substring(0, slash_index);
-		    if (revision == "head")
-		    {
-			var path = trim_prefix(url_remainder, revision + "/");
-			$.get(app.db.uri + $.couch.encodeDocId("git-branches"),
-			      {}, function(doc)
-			      {
-				  var found_it = false;
-				  var by_name = group_by(doc.branches, 
-							 function(b) {return b.branch});
-				  var branches = by_name[branch_name];
-				  if (typeof branches == "undefined")
-				  {
-				      $("#main_body").text("Missing branch: " + branch_name);
-				  }
-				  else
-				  {
-				      var branch = get1(branches);
-				      $.get(app.db.uri + $.couch.encodeDocId(branch._id),
-					    {}, function(bdoc)
-					    {
-						$.get(app.db.uri + $.couch.encodeDocId(bdoc.commit._id),
-						      {}, function(cdoc) 
-						      {
-							  var slash_index = path.indexOf("/");
-							  if (slash_index == -1)
-							  {
-							      var basename = path;
-							      $.get(app.db.uri 
-								    + $.couch.encodeDocId(cdoc.tree._id), {}, 
-								    function(tdoc) 
-								    {
-									var by_basename = group_by(tdoc.children, 
-												   function(a)
-												   {
-												       return a.basename;
-												   });
-									var match = by_basename[basename];
-									if (typeof match == "undefined")
-									{
-									    $("#main_body").text("Nothing at path: " + path);
-									}
-									else
-									{
-									    var blob_id = get1(
-										by_basename[basename]).child._id;
-									    $.get(app.db.uri + $.couch.encodeDocId(blob_id),
-										  {}, function(bdoc) 
-										  {
-										      if (bdoc.encoding == "raw")
-										      {
-											  $("#main_body").html(
-											      '<pre id="blob_data"></pre>');
-											  $("#blob_data").text(bdoc.raw);
-										      }
-										      else
-										      {
-											  $("#main_body").html(
-											      '<p>File may be binary: '
-												  + '<span id="filepath"></span>'
-												  + '<pre id="blob_data"></pre>');
-											  $("#filepath").text(path);
-											  $("#blob_data").text(hexdump(bdoc.base64))
-										      }
-										  }, "json");
-									}
-								    }, "json");
-							  }
-							  else
-							  {
-							      $("#main_body").text("TODO: Recursive traversal");
-							  }
-						      }, "json");
-					    }, "json");
-				  }
-			      }, "json");
-		    }
-		    else
-		    {
-			$("#main_body").text("Must go to head revision for now");
-		    }
-		}
-            }
-        }
-        else if (location.hash == "#git-branches")
-        {
-            $("#main_body").evently("branches", app);
-        }
-        else if (startswith(location.hash, "#git-branch-"))
-        {
-            var uri = (app.db.uri 
-                       + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
-            $.get(uri, {}, function(doc) {
-		$("#main_body").html("<h2>Git Branch <span "
-				     + "id=\"branch_name\"></span></h2>"
-                                     + "<p>Commit: <a id=\"commit_sha\"></a></p>");
-		$("#branch_name").text(doc.branch);
-		$("#commit_sha").text(doc.commit.sha);
-		$("#commit_sha").attr("href", "#" + doc.commit._id);
-            }, "json");
-        }
-        else if (startswith(location.hash, "#git-commit-"))
-        {
-            var uri = (app.db.uri 
-                       + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
-            $.get(uri, {}, function(doc)
-		  {
-		      $("#main_body").html("<h2>Git Commit <span "
-					   + "class=\"commit_sha\"></span></h2>"
-					   + "<pre class=\"commit_message\"></pre>"
-					   + "<p>SHA: <a class=\"commit_sha\"></a></p>"
-					   + "<p>Author: <a class="
-					   + "\"commit_author_name\"></a> (<span "
-					   + "class=\"commit_author_date\"></span>)</p>"
-					   + "<p>Committer: <a class="
-					   + "\"committer_name\"></a> (<span "
-					   + "class=\"committer_date\"></span>)</p>"
-					   + "<p>Tree: <a id=\"tree_sha\"></a></p>"
-					   + "<p>Parents:</p><ul "
-					   + "id=\"parents_list\"></ul>"
-					  );
-		      $(".commit_sha").text(doc.sha);
-		      $(".commit_author_name").text(doc.author.name);
-		      $(".commit_author_name").attr("href", 
-						    "mailto:" + doc.author.email);
-		      $(".commit_author_date").text(doc.author.date);
-		      $(".committer_name").text(doc.committer.name);
-		      $(".committer_name").attr("href", 
-						"mailto:" + doc.committer.email);
-		      $(".committer_date").text(doc.committer.date);
-		      $(".commit_message").text(doc.message);
-		      $("#tree_sha").text(doc.tree.sha);
-		      $("#tree_sha").attr("href", "#" + doc.tree._id);
-		      for (var i = 0; i < doc.parents.length; i++)
-		      {
-			  var li = $("<li></li>");
-			  var a = $("<a></a>");
-			  a.attr("href", "#" + doc.parents[i]._id);
-			  a.text(doc.parents[i].sha);
-			  li.append(a);
-			  $("#parents_list").append(li);
-		      }
-		  }, "json");
-        }
-        else if (startswith(location.hash, "#git-tree-"))
-        {
-            var uri = (app.db.uri 
-                       + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
-            $.get(uri, {}, function(doc)
-		  {
-		      $("#main_body").html("<h2>Git Tree <span "
-					   + "class=\"tree_sha\"></span></h2>"
-					   + "<pre class=\"commit_message\"></pre>"
-					   + "<p>SHA: <a class=\"tree_sha\"></a></p>"
-					   + "<p>Entries:</p><table "
-					   + "id=\"entries_list\"></table>"
-					  );
-		      $(".tree_sha").text(doc.sha);
-		      for (var i = 0; i < doc.children.length; i++)
-		      {
-			  var li = $("<tr></tr>");
-			  var mode_span = $("<td style=\"font-family: monospace;\"></td>");
-			  mode_span.text(doc.children[i].mode);
-			  li.append(mode_span);
-			  var basename_span = $("<th style=\"text-align: left;\"></th>");
-			  basename_span.text(doc.children[i].basename);
-			  li.append(basename_span);
-			  var sha_cell = $("<td style=\"font-family: monospace;\"></td>");
-			  var a = $("<a></a>");
-			  a.attr("href", "#" + doc.children[i].child._id);
-			  a.text(doc.children[i].child.sha);
-			  sha_cell.append(a);
-			  li.append(sha_cell);
-			  $("#entries_list").append(li);
-		      }
-		  }, "json");
-        }
-        else if (startswith(location.hash, "#git-blob-"))
-        {
-            var uri = (app.db.uri 
-                       + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
-            $.get(uri, {}, function(doc) {
-		$("#main_body").html("<h2>Git Blob <span "
-				     + "class=\"blob_sha\"></span></h2>"
-                                     + "<p>SHA: <a class=\"blob_sha\"></a></p>"
-				    );
-		if (doc.encoding == "raw")
-		{
-		    var pre = $("<pre></pre>");
-		    pre.text(doc.raw);
-		    $("#main_body").append(pre)
-		}
-		else
-		{
-		    $("#main_body").append("<p><em>Appears to be a "
-					   + "binary file</em><p>");
-		}
-		$(".blob_sha").text(doc.sha);
-            }, "json");
-        }
-        else
-        {
-            $("#main_body").html(
-		'<em>Failed to load.  Try going ' + 
-		    '<a href="javascript: history.go(-1)">back</a>.</em>');
-        }
-    });
-    console.debug("new code");
+    $(window).hashchange(function() {});
     $(window).hashchange();
 });
