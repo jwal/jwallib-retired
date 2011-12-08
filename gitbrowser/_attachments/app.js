@@ -140,7 +140,7 @@ function split_path(path_string)
     	var remainder = remainder.substring(slash_index + 1);
     }
     console.debug(path, path_string);
-    var result = [];
+    var decoded_path = [];
     for (var i = 0; i < path.length; i++)
     {
 	var decoded = decodeURIComponent(path[i]);
@@ -150,10 +150,10 @@ function split_path(path_string)
 			    + ": " + path_string);
 	}
 	console.debug("push", decoded);
-	result.push(decoded);
+	decoded_path.push(decoded);
     }
-    console.debug(result);
-    return result;
+    console.debug(decoded_path);
+    return decoded_path;
 }
 function show_file_or_folder(branch, revision, path)
 {
