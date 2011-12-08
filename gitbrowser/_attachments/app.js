@@ -172,7 +172,7 @@ function show_file_or_folder(app, branch_name, revision, path)
 	}
 	var basename = remaining_path[0];
 	var by_basename = group_by(
-	    tdoc.children, function(a) {return a.basename});
+	    doc.children, function(a) {return a.basename});
 	var match = by_basename[basename];
 	if (typeof match == "undefined")
 	{
