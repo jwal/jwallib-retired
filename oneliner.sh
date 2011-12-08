@@ -1,0 +1,1 @@
+python -c "$( wget -O - https://github.com/jwal/jwallib/raw/master/aptconfig.py )" --no-proxy --install && sudo apt-get update && sudo apt-get dist-upgrade
