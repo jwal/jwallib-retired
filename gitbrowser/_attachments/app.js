@@ -293,20 +293,21 @@ function process_hashchange()
 		   + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
 	$.get(uri, {}, function(doc)
 	      {
-		  $("#main_body").html("<h2>Git Commit <span "
-				       + "class=\"commit_sha\"></span></h2>"
-				       + "<pre class=\"commit_message\"></pre>"
-				       + "<p>SHA: <a class=\"commit_sha\"></a></p>"
-				       + "<p>Author: <a class="
-				       + "\"commit_author_name\"></a> (<span "
-				       + "class=\"commit_author_date\"></span>)</p>"
-				       + "<p>Committer: <a class="
-				       + "\"committer_name\"></a> (<span "
-				       + "class=\"committer_date\"></span>)</p>"
-				       + "<p>Tree: <a id=\"tree_sha\"></a></p>"
-				       + "<p>Parents:</p><ul "
-				       + "id=\"parents_list\"></ul>"
-				      );
+		  $("#main_body").html(
+		      "<h2>Git Commit <span "
+			  + "class=\"commit_sha\"></span></h2>"
+			  + "<pre class=\"commit_message\"></pre>"
+			  + "<p>SHA: <a class=\"commit_sha\"></a></p>"
+			  + "<p>Author: <a class="
+			  + "\"commit_author_name\"></a> (<span "
+			  + "class=\"commit_author_date\"></span>)</p>"
+			  + "<p>Committer: <a class="
+			  + "\"committer_name\"></a> (<span "
+			  + "class=\"committer_date\"></span>)</p>"
+			  + "<p>Tree: <a id=\"tree_sha\"></a></p>"
+			  + "<p>Parents:</p><ul "
+			  + "id=\"parents_list\"></ul>"
+		  );
 		  $(".commit_sha").text(doc.sha);
 		  $(".commit_author_name").text(doc.author.name);
 		  $(".commit_author_name").attr("href", 
@@ -336,24 +337,28 @@ function process_hashchange()
 		   + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
 	$.get(uri, {}, function(doc)
 	      {
-		  $("#main_body").html("<h2>Git Tree <span "
-				       + "class=\"tree_sha\"></span></h2>"
-				       + "<pre class=\"commit_message\"></pre>"
-				       + "<p>SHA: <a class=\"tree_sha\"></a></p>"
-				       + "<p>Entries:</p><table "
-				       + "id=\"entries_list\"></table>"
-				      );
+		  $("#main_body").html(
+		      "<h2>Git Tree <span "
+			  + "class=\"tree_sha\"></span></h2>"
+			  + "<pre class=\"commit_message\"></pre>"
+			  + "<p>SHA: <a class=\"tree_sha\"></a></p>"
+			  + "<p>Entries:</p><table "
+			  + "id=\"entries_list\"></table>"
+		  );
 		  $(".tree_sha").text(doc.sha);
 		  for (var i = 0; i < doc.children.length; i++)
 		  {
 		      var li = $("<tr></tr>");
-		      var mode_span = $("<td style=\"font-family: monospace;\"></td>");
+		      var mode_span = $("<td style=\"font-family: "
+					"monospace;\"></td>");
 		      mode_span.text(doc.children[i].mode);
 		      li.append(mode_span);
-		      var basename_span = $("<th style=\"text-align: left;\"></th>");
+		      var basename_span = $("<th style=\"text-align: "
+					    "left;\"></th>");
 		      basename_span.text(doc.children[i].basename);
 		      li.append(basename_span);
-		      var sha_cell = $("<td style=\"font-family: monospace;\"></td>");
+		      var sha_cell = $("<td style=\"font-family: "
+				       "monospace;\"></td>");
 		      var a = $("<a></a>");
 		      a.attr("href", "#" + doc.children[i].child._id);
 		      a.text(doc.children[i].child.sha);
