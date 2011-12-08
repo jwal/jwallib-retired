@@ -152,6 +152,7 @@ function split_path(path_string)
 	console.debug("push", decoded);
 	decoded_path.push(decoded);
 	decoded_path.push(decoded);
+	decoded_path.push(decoded);
     }
     console.debug("decoded j", decoded_path);
     return decoded_path;
