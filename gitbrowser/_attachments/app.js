@@ -53,8 +53,11 @@ function hexdump(b64data)
 				  hex_part.length));
         var line_id = "00000000" + (i - str_result.length + 1).toString(16);
         var line_id = line_id.substring(line_id.length - 8);
-        result.push(line_id + "  " + hex_part + " |" 
-                    + str_result.join("") + "|\r\n");
+	if (hex_part.length > 0)
+	{
+            result.push(line_id + "  " + hex_part + " |" 
+			+ str_result.join("") + "|\r\n");
+	}
         hex_result.splice(0, hex_result.length);
         str_result.splice(0, str_result.length);
     }
