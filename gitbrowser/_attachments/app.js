@@ -123,13 +123,11 @@ function get1(items)
 }
 function split_path(path_string)
 {
-    console.debug("splitting", path_string);
     var remainder = path_string;
     var path = [];
     var separator = "/";
     while (true)
     {
-    	console.debug("iteration", remainder);
     	var slash_index = remainder.indexOf("/");
     	if (slash_index == -1)
     	{
@@ -139,7 +137,6 @@ function split_path(path_string)
     	path.push(remainder.substring(0, slash_index));
     	var remainder = remainder.substring(slash_index + 1);
     }
-    console.debug(path, path_string);
     var decoded_path = [];
     for (var j = 0; j < path.length; j++)
     {
@@ -258,7 +255,6 @@ function process_hashchange()
     {
 	console.debug("asked to show", trim_prefix(location.hash, "#show/"));
 	var path = split_path(trim_prefix(location.hash, "#show/"));
-	console.debug("" + path);
 	if (path.length == 0)
 	{
 	    throw new Error("Not enough path (missing branch): " + path);
