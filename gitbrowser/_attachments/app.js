@@ -123,6 +123,7 @@ function get1(items)
 }
 function split_path(path_string)
 {
+    console.debug("splitting", path_string);
     var remainder = path_string;
     var path = [];
     var separator = "/";
