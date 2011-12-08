@@ -356,5 +356,6 @@ $.couch.app(function(app) {
 		    '<a href="javascript: history.go(-1)">back</a>.</em>');
         }
     });
+    console.debug("new code");
     $(window).hashchange();
 });
