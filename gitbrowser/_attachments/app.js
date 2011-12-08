@@ -58,10 +58,6 @@ function hexdump(b64data)
             result.push(line_id + "  " + hex_part + " |" 
 			+ str_result.join("") + "|\r\n");
 	}
-	else
-	{
-	    console.debug()
-	}
         hex_result.splice(0, hex_result.length);
         str_result.splice(0, str_result.length);
     }
