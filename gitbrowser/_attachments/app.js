@@ -234,7 +234,7 @@ function show_file_or_folder(app, branch_name, revision, path)
 	{
 	    throw new Error("Don't know how to render: " + doc.type);
 	}
-	$("#main_body").text();
+	$("#main_body").text("");
 	$("#main_body").append(body)
     }
     function handle_tree_or_blob(doc, remaining_path)
