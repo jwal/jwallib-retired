@@ -1,4 +1,5 @@
 [
-	{"from": "/", 
-	 "to": "/index.html"}
+	{"from": "/", "to": "/index.html"},
+	{"from": "/*", "to": "/*"},
+	{"from": "/db/*", "to": "../../*"}
 ]
