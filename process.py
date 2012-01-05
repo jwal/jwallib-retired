@@ -12,7 +12,10 @@ def call(argv, **kwargs):
     rc = kwargs.pop("check_rc", 0)
     do_check = kwargs.pop("do_check", True)
     do_crlf_fix = kwargs.pop("do_crlf_fix", True)
-    child = subprocess.Popen(argv, **kwargs)
+    try:
+        child = subprocess.Popen(argv, **kwargs)
+    except Exception, e:
+        raise Exception("Failed to spawn child process %r: %s" % (argv, e))
     if do_wait:
         stdout, stderr = child.communicate()
         if do_check:
