@@ -85,6 +85,8 @@ def resolve_document_using_git(git, docref):
                 line = trim(line, prefix="  ")
             elif line.startswith("* "):
                 line = trim(line, prefix="* ")
+                if line == "(no branch)":
+                    continue
             else:
                 raise NotImplementedError(line)
             if " -> " in line:
@@ -93,8 +95,7 @@ def resolve_document_using_git(git, docref):
                 branches.add(posixpath.basename(bb))
             else:
                 branches.add(posixpath.basename(line))
-        branches = list(sorted(branches))
-        print ">>>", branches
+        branches = list(sorted(b for b in branches if b != "HEAD"))
         document["branches"] = []
         for branch in branches:
             document["branches"].append(docref_to_dict(BranchDocref(branch)))
