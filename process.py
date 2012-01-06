@@ -20,9 +20,9 @@ def call(argv, **kwargs):
         stdout, stderr = child.communicate()
         if do_check:
             assert child.returncode == rc, (child.returncode, argv, stdout)
-        if do_crlf_fix and stdout is not None and "\r" not in stdout:
+        if do_crlf_fix and stdout is not None:
             # print "@@@", repr(stdout)
-            stdout = stdout.replace("\n", "\r\n")
+            stdout = stdout.replace("\r\n", "\n").replace("\n", "\r\n")
         # print "###", repr(stdout)
         return stdout
     else:

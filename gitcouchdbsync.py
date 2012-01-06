@@ -1,7 +1,7 @@
 # Copyright 2011 James Ascroft-Leigh
 
 """\
-%prog [options] GIT_URL COUCHDB_URL
+%prog [options] [GIT_URL] COUCHDB_URL
 
 I copy objects from GIT_URL and put them into COUCHDB_URL.  To copy
 objects in the other direction try couchdbgitsync.py.
@@ -79,15 +79,29 @@ def resolve_document_using_git(git, docref):
         do_check=False)
     get = lambda a: git_show(git, docref.name, a)
     if kind == "branches":
-        branches = [trim(a, prefix="  remotes/origin/")
-                    for a in read_lines(call(git + ["branch", "-a"]))]
+        branches = set()
+        for line in read_lines(call(git + ["branch", "-a"])):
+            if line.startswith("  "):
+                line = trim(line, prefix="  ")
+            elif line.startswith("* "):
+                line = trim(line, prefix="* ")
+            else:
+                raise NotImplementedError(line)
+            if " -> " in line:
+                ba, bb = line.split(" -> ", 1)
+                branches.add(posixpath.basename(ba))
+                branches.add(posixpath.basename(bb))
+            else:
+                branches.add(posixpath.basename(line))
+        branches = list(sorted(branches))
+        print ">>>", branches
         document["branches"] = []
         for branch in branches:
             document["branches"].append(docref_to_dict(BranchDocref(branch)))
     elif kind == "branch":
         sha = get1(
             read_lines(
-                call(git + ["rev-parse", "remotes/origin/" + docref.name])))
+                call(git + ["rev-parse", docref.name])))
         document["commit"] = docref_to_dict(ShaDocRef("commit", sha))
     elif kind == "commit":
         document.update(
@@ -316,15 +330,18 @@ def force_couchdb_put_with_rev(couchdb_url, *documents):
 force_couchdb_put = force_couchdb_put_with_rev
 
 def git_to_couchdb_using_git(cache_root, git_url, couchdb_url):
-    cache_dir = os.path.join(cache_root, encode_as_c_identifier(git_url))
-    git = ["bash", "-c", 'cd "$1" && shift && exec "$@"', "-", cache_dir, 
-           "git"]
-    call(["mkdir", "-p", cache_dir])
-    call(git + ["init"])
-    for r in read_lines(call(git + ["remote"])):
-        call(git + ["remote", "rm", r])
-    call(git + ["remote", "add", "origin", git_url])
-    call(git + ["fetch", "origin"], stdout=None, stderr=None)
+    if git_url is None:
+        git = ["git"]
+    else:
+        cache_dir = os.path.join(cache_root, encode_as_c_identifier(git_url))
+        git = ["bash", "-c", 'cd "$1" && shift && exec "$@"', "-", cache_dir, 
+               "git"]
+        call(["mkdir", "-p", cache_dir])
+        call(git + ["init"])
+        for r in read_lines(call(git + ["remote"])):
+            call(git + ["remote", "rm", r])
+        call(git + ["remote", "add", "origin", git_url])
+        call(git + ["fetch", "origin"], stdout=None, stderr=None)
     resolve_document = lambda d: resolve_document_using_git(git, d)
     fetch_all(resolve_document, couchdb_url, [BRANCHES_DOCREF])
 
@@ -342,11 +359,12 @@ def main(argv):
     parser.add_option("--cache-root", dest="cache_root") 
     options, args = parser.parse_args(argv)
     if len(args) == 0:
-        parser.error("Missing: GIT_URL")
-    git_url = args.pop(0)
-    if len(args) == 0:
         parser.error("Missing: COUCHDB_URL")
-    couchdb_url = args.pop(0)
+    couchdb_url = args.pop()
+    if len(args) == 0:
+        git_url = None
+    else:
+        git_url = args.pop()
     if len(args) > 0:
         parser.error("Unexpected: %r" % (args,))
     cache_root = options.cache_root
