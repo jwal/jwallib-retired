@@ -20,7 +20,8 @@ def main(argv):
     if len(args) > 0:
         parser.error("Unexpected: %r" % (args,))
     # cd git/jwallib
-    cwd_script = ["bash", "-c", 'cd "$1" && shift && exec "$@"', "-"]
+    cwd_script = ["bash", "-c", 'cd "$1" && shift && exec "$@"', "-", 
+                  "git/jwallib"]
     # git checkout master
     subprocess.check_call(cwd_script + ["git", "checkout", "master"])
     # git reset --hard remotes/origin/master
