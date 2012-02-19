@@ -4,6 +4,6 @@ Includes some git-to-couchdb utilities just for fun.
 Also try it here:
 https://jwal.cloudant.com/jwallib/_design/git-branch-master/_rewrite
 
-# Copyright 2011 James Ascroft-Leigh
+# Copyright 2011-2012 James Ascroft-Leigh
 
 Now built automatically by Jenkins hosted by cloudbees.com
