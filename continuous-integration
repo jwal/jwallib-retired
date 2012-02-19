@@ -28,7 +28,7 @@ def main(argv):
     subprocess.check_call(cwd_script + ["git", "reset", "--hard", 
                                         "remotes/origin/master"])
     # git log -1
-    subprocess.check_call(cwd_script + ["git", "log", "-l"])
+    subprocess.check_call(cwd_script + ["git", "log", "-1"])
     # git branch -a
     subprocess.check_call(cwd_script + ["git", "branch", "-a"])
     # python aptconfig.py '{"distribution": "lucid"}'
