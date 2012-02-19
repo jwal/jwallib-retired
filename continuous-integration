@@ -45,7 +45,7 @@ def main(argv):
     # if [[ ! -x ../../couchapp_env ]] ; then
     env_script = ["bash", "-c",
                   'source couchapp_env/bin/activate && exec "$@"', "-"]
-    if not os.path.exists(couchapp_env):
+    if not os.path.exists("couchapp_env"):
     #     virtualenv ../../couchapp_env
         subprocess.check_call(["virtualenv", "couchapp_env"])
     #     source ../../couchapp_env/bin/activate
