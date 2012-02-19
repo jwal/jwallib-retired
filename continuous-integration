@@ -1,0 +1,65 @@
+#!/usr/bin/env python
+# -*- mode: python -*-
+
+"""\
+%prog [options]
+"""
+
+import optparse
+import os
+import subprocess
+import sys
+
+def main(argv):
+    parser = optparse.OptionParser(__doc__)
+    parser.add_option("--couchdb-username", dest="couchdb_username",
+                      default="guessme")
+    parser.add_option("--couchdb-password", dest="couchdb_password",
+                      default="guessme")
+    options, args = parser.parse_args(argv)
+    if len(args) > 0:
+        parser.error("Unexpected: %r" % (args,))
+    # cd git/jwallib
+    cwd_script = ["bash", "-c", 'cd "$1" && shift && exec "$@"', "-"]
+    # git checkout master
+    subprocess.check_call(cwd_script + ["git", "checkout", "master"])
+    # git reset --hard remotes/origin/master
+    subprocess.check_call(cwd_script + ["git", "reset", "--hard", 
+                                        "remotes/origin/master"])
+    # git log -1
+    subprocess.check_call(cwd_script + ["git", "log", "-l"])
+    # git branch -a
+    subprocess.check_call(cwd_script + ["git", "branch", "-a"])
+    # python aptconfig.py '{"distribution": "lucid"}'
+    subprocess.check_call(cwd_script + ["python", "aptconfig.py",
+                                        '{"distribution": "lucid"}'])
+    # python gitcouchdbsync.py \
+    #   "https://guessme:guessme@jwal.cloudant.com/jwallib/"
+    couchdb_url = "https://%s:%s@jwal.cloudant.com/jwallib/" % (
+        urllib.quote(options.couchdb_username, safe=""),
+        urllib.quote(options.couchdb_password, safe=""))
+    subprocess.check_call(cwd_script + ["python", "gitcouchdbsync.py", 
+                                        couchdb_url])
+    # if [[ ! -x ../../couchapp_env ]] ; then
+    env_script = ["bash", "-c",
+                  'source couchapp_env/bin/activate && exec "$@"', "-"]
+    if not os.path.exists(couchapp_env):
+    #     virtualenv ../../couchapp_env
+        subprocess.check_call(["virtualenv", "couchapp_env"])
+    #     source ../../couchapp_env/bin/activate
+    #     pip install couchapp
+        subprocess.check_call(env_script + ["pip", "install", "couchapp"])
+    # else
+    #     source ../../couchapp_env/bin/activate
+    # fi
+    # couchapp --version
+    subprocess.check_call(env_script + ["couchapp", "--version"])
+    # python selfcouchapp.py --app-subdir gitbrowser \
+    #   "https://guessme:guessme@jwal.cloudant.com/jwallib/"
+    subprocess.check_call(env_script + cwd_script 
+                          + ["python", "selfcouchapp.py",
+                             "--app-subdir", "gitbrowser",
+                             couchdb_url])
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
