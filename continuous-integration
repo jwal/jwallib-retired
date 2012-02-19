@@ -9,6 +9,7 @@ import optparse
 import os
 import subprocess
 import sys
+import urllib
 
 def main(argv):
     parser = optparse.OptionParser(__doc__)
