@@ -77,14 +77,16 @@ def awallet_extract(crypt_data, password):
                 print "      initial_digester=%r" % (initial_digester,)
                 for digester in digesters:
                     print "        digester=%r" % (digester,)
-                    digest = getattr(SHA256.new(initial_key), initial_digester)()
+                    digest = getattr(SHA256.new(initial_key), 
+                                     initial_digester)()
                     for repeat_count in SHA_REPEATS:
                         print "          repeat_count=%r" % (repeat_count,)
                         for i in range(repeat_count):
                             digest = SHA256.new(digest).digest()
                         full_key = digest
                         for algorithm, keysizes in ALGORITHMS:
-                            print "            algorithm=%r" % (algorithm.__name__,)
+                            print "            algorithm=%r" % (
+                                algorithm.__name__,)
                             for keysize in keysizes:
                                 print "              keysize=%r" % (keysize,)
                                 assert len(full_key) * 8 >= keysize, \
@@ -93,12 +95,12 @@ def awallet_extract(crypt_data, password):
                                 key = full_key[:keysize // 8]
                                 for cipher_mode in CIPHER_MODES:
                                     
-                                    print "                cipher_mode=%r" % (cipher_mode,)
-                                    mode_param = getattr(algorithm, "MODE_" + cipher_mode)
+                                    print "                cipher_mode=%r" % (
+                                        cipher_mode,)
+                                    mode_param = getattr(
+                                        algorithm, "MODE_" + cipher_mode)
                                     cipher = algorithm.new(key, mode_param)
                                     plaintext = cipher.decrypt(crypt_data)
-                                    # print repeat_count, algorithm, keysize, mode_param, repr(plaintext[:32]) + "..."
-                                    # print ".",
                                     if MAGIC_MARKER in plaintext:
                                         print "@@@@@ got it?"
                                         return plaintext
