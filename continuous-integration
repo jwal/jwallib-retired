@@ -34,7 +34,6 @@ def main(argv):
     if not options.force_in_git and os.path.exists(container_git_path):
         parser.error("Home directory seems to be a git repository, "
                      "are you sure about this? %r" % (container_git_path,))
-    print "@@@ %r" % (home_path,)
     if options.git_dir is None:
         git_path = os.path.join(home_path, "git", "jwallib")
     else:
