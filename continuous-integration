@@ -13,6 +13,15 @@ import urllib
 
 def main(argv):
     parser = optparse.OptionParser(__doc__)
+    parser.add_option("--home-dir", dest="home_dir",
+                      default=".")
+    parser.add_option("--git-dir", dest="git_dir")
+    parser.add_option("--git-url", dest="git_url",
+                      default="https://github.com/jwal/jwallib")
+    parser.add_option("--force-in-git", dest="force_in_git",
+                      action="store_const", const=True, default=False)
+    parser.add_option("--couchdb-url", dest="couchdb_url",
+                      default="https://jwal.cloudant.com/jwallib/")
     parser.add_option("--couchdb-username", dest="couchdb_username",
                       default="guessme")
     parser.add_option("--couchdb-password", dest="couchdb_password",
@@ -20,44 +29,43 @@ def main(argv):
     options, args = parser.parse_args(argv)
     if len(args) > 0:
         parser.error("Unexpected: %r" % (args,))
-    # cd git/jwallib
-    cwd_script = ["bash", "-c", 'cd "$1" && shift && exec "$@"', "-", 
-                  "git/jwallib"]
-    # git checkout master
+    home_path = os.path.abspath(options.home_dir)
+    container_git_path = os.path.join(home_path, ".git")
+    if not options.force_in_git and os.path.exists(container_git_path):
+        parser.error("Home directory seems to be a git repository, "
+                     "are you sure about this? %r" % (container_git_path,))
+    print "@@@ %r" % (home_path,)
+    if options.git_dir is None:
+        git_path = os.path.join(home_path, "git", "jwallib")
+    else:
+        git_path = os.path.abspath(options.git_dir)
+    if not os.path.exists(git_path):
+        subprocess.check_call(["git", "clone", options.git_url, git_path])
+    cwd_script = ["bash", "-c", 'cd "$1" && shift && exec "$@"', "-", git_path]
     subprocess.check_call(cwd_script + ["git", "checkout", "master"])
-    # git reset --hard remotes/origin/master
     subprocess.check_call(cwd_script + ["git", "reset", "--hard", 
                                         "remotes/origin/master"])
-    # git log -1
     subprocess.check_call(cwd_script + ["git", "log", "-1"])
-    # git branch -a
     subprocess.check_call(cwd_script + ["git", "branch", "-a"])
-    # python aptconfig.py '{"distribution": "lucid"}'
     subprocess.check_call(cwd_script + ["python", "aptconfig.py",
                                         '{"distribution": "lucid"}'])
-    # python gitcouchdbsync.py \
-    #   "https://guessme:guessme@jwal.cloudant.com/jwallib/"
-    couchdb_url = "https://%s:%s@jwal.cloudant.com/jwallib/" % (
+    scheme, rest = options.couchdb_url.split("://", 1)
+    couchdb_url = "%s://%s:%s@%s" % (
+        scheme,
         urllib.quote(options.couchdb_username, safe=""),
-        urllib.quote(options.couchdb_password, safe=""))
+        urllib.quote(options.couchdb_password, safe=""),
+        rest)
     subprocess.check_call(cwd_script + ["python", "gitcouchdbsync.py", 
                                         couchdb_url])
-    # if [[ ! -x ../../couchapp_env ]] ; then
+    virtualenv_path = os.path.join(home_path, "couchapp_env")
+    virtualenv_activate = os.path.join(virtualenv_path, "bin", "activate")
     env_script = ["bash", "-c",
-                  'source couchapp_env/bin/activate && exec "$@"', "-"]
-    if not os.path.exists("couchapp_env"):
-    #     virtualenv ../../couchapp_env
-        subprocess.check_call(["virtualenv", "couchapp_env"])
-    #     source ../../couchapp_env/bin/activate
-    #     pip install couchapp
+                  'source "$1" && shift && exec "$@"', "-",
+                  virtualenv_activate]
+    if not os.path.exists(virtualenv_path):
+        subprocess.check_call(["virtualenv", virtualenv_path])
         subprocess.check_call(env_script + ["pip", "install", "couchapp"])
-    # else
-    #     source ../../couchapp_env/bin/activate
-    # fi
-    # couchapp --version
     subprocess.check_call(env_script + ["couchapp", "--version"])
-    # python selfcouchapp.py --app-subdir gitbrowser \
-    #   "https://guessme:guessme@jwal.cloudant.com/jwallib/"
     subprocess.check_call(env_script + cwd_script 
                           + ["python", "selfcouchapp.py",
                              "--app-subdir", "gitbrowser",
