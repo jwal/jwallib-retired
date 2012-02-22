@@ -1,3 +1,12 @@
+var db_base = "" + window.location;
+if (db_base.indexOf("#") > -1) {
+    db_base = db_base.substr(0, db_base.indexOf("#"));
+}
+if (db_base.substr(db_base.length - 1, db_base.length) != "/") {
+    db_base = db_base + "/";
+}
+db_base = db_base + "db/";
+
 function b64decode(b64data) {
     
     /* Nod to http://www.webtoolkit.info/javascript-base64.html */
@@ -261,18 +270,18 @@ function show_file_or_folder(app, branch_name, revision, path)
 	{
 	    next_remainder.push(remaining_path[i]);
 	}
-	$.get(app.db.uri + $.couch.encodeDocId(child_id), {}, 
+	$.get(db_base + $.couch.encodeDocId(child_id), {}, 
 	      function(d) {return handle_tree_or_blob(d, next_remainder)},
 	      "json");
     }
     function handle_commit(doc)
     {
-	$.get(app.db.uri + $.couch.encodeDocId(doc.tree._id),
+	$.get(db_base + $.couch.encodeDocId(doc.tree._id),
 	      {}, function(d) {return handle_tree_or_blob(d, path)}, "json");
     }
     function handle_branch(doc)
     {
-	$.get(app.db.uri + $.couch.encodeDocId(doc.commit._id),
+	$.get(db_base + $.couch.encodeDocId(doc.commit._id),
 	      {}, handle_commit, "json");
     }
     function handle_branches(doc)
@@ -285,10 +294,10 @@ function show_file_or_folder(app, branch_name, revision, path)
 	    throw new Error("Missing branch: " + branch_name);
 	}
 	var branch = get1(branches);
-	$.get(app.db.uri + $.couch.encodeDocId(branch._id),
+	$.get(db_base + $.couch.encodeDocId(branch._id),
 	      {}, handle_branch, "json");
     }
-    $.get(app.db.uri + $.couch.encodeDocId("git-branches"),
+    $.get(db_base + $.couch.encodeDocId("git-branches"),
 	  {}, handle_branches, "json");
 }
 function process_hashchange(app)
@@ -317,7 +326,7 @@ function process_hashchange(app)
     }
     else if (startswith(location.hash, "#git-branch-"))
     {
-	var uri = (app.db.uri 
+	var uri = (db_base 
 		   + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
 	$.get(uri, {}, function(doc) {
 	    $("#main_body").html("<h2>Git Branch <span "
@@ -330,7 +339,7 @@ function process_hashchange(app)
     }
     else if (startswith(location.hash, "#git-commit-"))
     {
-	var uri = (app.db.uri 
+	var uri = (db_base 
 		   + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
 	$.get(uri, {}, function(doc)
 	      {
@@ -374,7 +383,7 @@ function process_hashchange(app)
     }
     else if (startswith(location.hash, "#git-tree-"))
     {
-	var uri = (app.db.uri 
+	var uri = (db_base 
 		   + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
 	$.get(uri, {}, function(doc)
 	      {
@@ -411,7 +420,7 @@ function process_hashchange(app)
     }
     else if (startswith(location.hash, "#git-blob-"))
     {
-        var uri = (app.db.uri 
+        var uri = (db_base 
                    + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
         $.get(uri, {}, function(doc) {
 	    $("#main_body").html("<h2>Git Blob <span "
