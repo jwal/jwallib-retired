@@ -53,7 +53,7 @@ function hexdump(b64data)
     {
         var hex_part = hex_result.join(" ");
         var hex_part_padding =  ("                        "
-                                 + "                        ")
+                                 + "                        ");
         var hex_part = hex_part + hex_part_padding;
         var hex_part = hex_part.substr(0, hex_part_padding.length);
         var hex_part = (
