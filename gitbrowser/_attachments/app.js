@@ -449,8 +449,8 @@ function process_hashchange(app)
     }   
 }
 $.couch.app(function(app) {
-    $("#account").evently("account", app);
-    $.evently.connect("#account","#profile", ["loggedIn","loggedOut"]);
+    // $("#account").evently("account", app);
+    // $.evently.connect("#account","#profile", ["loggedIn","loggedOut"]);
     if (location.hash == "" || location.hash == "#")
     {
         location.replace("#show/master/head/README");
