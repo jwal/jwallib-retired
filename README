@@ -2,7 +2,7 @@ A set of utility functions found useful by James Ascroft-Leigh.
 Includes some git-to-couchdb utilities just for fun.
 
 Also try it here:
-https://jwal.cloudant.com/jwallib/_design/git-branch-master/_rewrite
+https://jwallib.declarative.co.uk/
 
 # Copyright 2011-2012 James Ascroft-Leigh
 
