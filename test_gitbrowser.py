@@ -1,0 +1,87 @@
+#!/usr/bin/env python
+
+"""\
+%prog [options] -- [UNITTEST2_ARGS...]
+"""
+
+import optparse
+import os
+import subprocess
+import sys
+import unittest2
+import urllib
+
+class GitbrowserSeleniumTests(unittest2.TestCase):
+
+    source_dir = NotImplemented
+    couchdb_url = NotImplemented
+
+    def test(self):
+        pass
+
+def on_error_raise(message=""):
+    raise Exception(message)
+
+def setup_globals_and_home(options, on_error=on_error_raise):
+    home_path = os.path.abspath(options.home_dir)
+    container_git_path = os.path.join(home_path, ".git")
+    if not options.force_in_git and os.path.exists(container_git_path):
+        return on_error("Home directory seems to be a git repository, "
+                        "are you sure about this? %r" % (container_git_path,))
+    if options.do_clean_home:
+        subprocess.check_call(["rm", "-rf", "--one-file-system", home_path])
+    if options.source_dir is None:
+        source_path = os.path.join(home_path, "git", "jwallib")
+    else:
+        source_path = os.path.abspath(options.source_dir)
+    if not os.path.exists(source_path):
+        subprocess.check_call(["git", "clone", options.git_url, source_path])
+    cwd_script = ["bash", "-c", 'cd "$1" && shift && exec "$@"', "-", 
+                  source_path]
+    scheme, rest = options.couchdb_url.split("://", 1)
+    couchdb_url = "%s://%s:%s@%s" % (
+        scheme,
+        urllib.quote(options.couchdb_username, safe=""),
+        urllib.quote(options.couchdb_password, safe=""),
+        rest)
+    # subprocess.check_call(cwd_script + ["python", "gitcouchdbsync.py", 
+    #                                     couchdb_url])
+    virtualenv_path = os.path.join(home_path, "couchapp_env")
+    virtualenv_activate = os.path.join(virtualenv_path, "bin", "activate")
+    env_script = ["bash", "-c",
+                  'source "$1" && shift && exec "$@"', "-",
+                  virtualenv_activate]
+    if not os.path.exists(virtualenv_path):
+        subprocess.check_call(["virtualenv", virtualenv_path])
+        subprocess.check_call(env_script + ["pip", "install", "couchapp"])
+    # subprocess.check_call(env_script + cwd_script 
+    #                       + ["python", "selfcouchapp.py",
+    #                          "--app-subdir", "gitbrowser",
+    #                          couchdb_url])
+    GitbrowserSeleniumTests.source_path = source_path
+    GitbrowserSeleniumTests.couchdb_url = couchdb_url
+
+def main(prog, argv):
+    parser = optparse.OptionParser(prog=prog)
+    parser.add_option("--home-dir", dest="home_dir",
+                      default=".")
+    parser.add_option("--source-dir", dest="source_dir")
+    parser.add_option("--git-url", dest="git_url",
+                      default="https://github.com/jwal/jwallib")
+    parser.add_option("--force-in-git", dest="force_in_git",
+                      action="store_const", const=True, default=False)
+    parser.add_option("--couchdb-url", dest="couchdb_url",
+                      default="https://jwal.cloudant.com/gitbrowser-testing")
+    parser.add_option("--couchdb-username", dest="couchdb_username",
+                      default="guessme")
+    parser.add_option("--couchdb-password", dest="couchdb_password",
+                      default="guessme")
+    parser.add_option("--no-clean-home", default=True, const=False,
+                      action="store_const", dest="do_clean_home")
+    options, args = parser.parse_args(argv)
+    unittest_argv = [prog] + args
+    setup_globals_and_home(options, on_error=on_error_raise)
+    unittest2.main(argv=unittest_argv)
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[0], sys.argv[1:]))
