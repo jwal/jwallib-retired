@@ -43,7 +43,7 @@ from hashlib import sha1
 from jwalutil import trim, read_lines, get1, is_text
 from pprint import pformat
 from process import call
-from couchdblib import get
+from couchdblib import get, put, put_update
 from posixutils import octal_to_symbolic_mode, symbolic_to_octal_mode
 import base64
 import contextlib
@@ -292,41 +292,10 @@ def force_couchdb_put_all_or_nothing(couchdb_url, *documents):
         result = json.loads(out.getvalue())
         assert all(a.get("error") is None for a in result), result
 
-def put(url, document):
-    with contextlib.closing(curl.Curl()) as c:
-        c.setopt(c.URL, url)
-        out = StringIO()
-        c.setopt(c.WRITEFUNCTION, out.write)
-        c.setopt(c.UPLOAD, True)
-        c.setopt(c.READFUNCTION, StringIO(json.dumps(document)).read)
-        c.perform()
-        return json.loads(out.getvalue())
-
 def force_couchdb_put_with_rev(couchdb_url, *documents):
     for document in documents:
-        doc_url = posixpath.join(couchdb_url, document["_id"]).encode("ascii")
-        i = 0
-        while True:
-            if i % 1000 == 0 and i != 0:
-                print i, "The race is on!"
-            old_doc = get(doc_url)
-            if (old_doc.get("error") == "not_found" 
-                and old_doc.get("reason") == "missing"):
-                result = put(doc_url, document)
-                if result.get("error") is None:
-                    break
-            else:
-                assert old_doc.get("error") is None, old_doc
-                rev = old_doc.pop("_rev")
-                if document == old_doc:
-                    break
-                else:
-                    d2 = dict(document)
-                    d2["_rev"] = rev
-                    result = put(doc_url, d2)
-                    if result.get("error") is None:
-                        break
-            i += 1                
+        put_update(posixpath.join(couchdb_url, document["_id"]),
+                   lambda _: document)
 
 force_couchdb_put = force_couchdb_put_with_rev
 

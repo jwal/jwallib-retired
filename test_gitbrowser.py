@@ -4,10 +4,14 @@
 %prog [options] -- [UNITTEST2_ARGS...]
 """
 
+from couchdblib import get, put, post, put_update, url_quote
+import datetime
 import optparse
 import os
+import posixpath
 import subprocess
 import sys
+import time
 import unittest2
 import urllib
 
@@ -16,8 +20,75 @@ class GitbrowserSeleniumTests(unittest2.TestCase):
     source_dir = NotImplemented
     couchdb_url = NotImplemented
 
+    def _run_test(self):
+        # Wipe out all git-related documents and the design document
+        # Populate a test GIT repository
+        # Copy the git repository to the couchdb
+        # Upload the gitbrowser to the couchdb design document
+        # Run selenium testing against the public URL
+
     def test(self):
-        pass
+        def now():
+            return datetime.datetime.utcnow().isoformat() + "Z"
+        # Add this test run to the queue on the shared database
+        document = {
+            "request_time": now(),
+            "start_time": "",
+            "end_time": "",
+            "status": "pending",
+            }
+        result = post(self.couchdb_url, document, id_template="test-run-%s")
+        my_url = posixpath.join(self.couchdb_url, url_quote(result["id"]))
+        queue_url = posixpath.join(self.couchdb_url, "test-queue")
+        def append_to_queue(queued):
+            queued.setdefault("queue", []).append(
+                {"_id": result["id"],
+                 "request_time": document["request_time"],
+                 })
+        def remove_from_queue(queued):
+            queue = queued.get("queue", [])
+            queue = [e for e in queue if e.get("_id") != result["id"]]
+            queued["queue"] = queued
+        put_update(queue_url, append_to_queue)
+        try:
+            while True:
+                queue = get(queue_url)
+                for i, entry in enumerate(queue.get("queue", [])):
+                    if entry["_id"] == result["id"]:
+                        my_index = i
+                        break
+                else:
+                    raise Exception("I seem to have been un queued")
+        # Is there a non-expired entry in the queue ahead of mine?
+                if my_index == 0:
+                    def mark_running(job):
+                        job.update(
+                            {"status": "running",
+                             "start_time": now()})
+                    status = "aborted"
+                    def mark_stopped(job):
+                        job["status"].update(
+                            {"status": status,
+                             "stop_time": now()})
+        # Mark the test as running 
+                    put_update(my_url, mark_running)
+                    try:
+                        try:
+                            self._run_test()
+                        except AssertionError:
+                            status = "failed"
+                        except Exception:
+                            status = "error"
+                        else:
+                            status = "passed"
+                    finally:
+                        put_update(my_url, mark_stopped)
+                else:
+        # Set a timout for the next time to check, if necessary
+                    time.sleep(5)
+        finally:
+        # Mark the test as completed
+            put_update(queue_url, remove_from_queue)
 
 def on_error_raise(message=""):
     raise Exception(message)
