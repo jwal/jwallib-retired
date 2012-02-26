@@ -225,17 +225,20 @@ def fetch_all(resolve_document, couchdb_url, seeds):
     to_fetch = list(seeds)
     push = lambda x: to_fetch.append(x)
     pop = lambda: to_fetch.pop()
+
     def priority_sort_key(docref):
         priority_items = ["commit", "tree"]
         i = dict((a, idx) for (idx, a) in enumerate(priority_items)).get(
             docref.kind, len(priority_items))
         return (i, docref.name, docref)
+
     def multipush(many, limit=None):
         for i, item in enumerate(reversed(
                 sorted(many, key=priority_sort_key))):
             if limit is not None and i > limit:
                 break
             push(item)
+
     multipush(seeds)
     mutable_buffer = {}
     local_buffer = {}

@@ -7,9 +7,18 @@
 
 import optparse
 import os
+import posixpath
 import subprocess
 import sys
 import urllib
+
+def add_user_to_url(base_url, username, password):
+    scheme, rest = base_url.split("://", 1)
+    return "%s://%s:%s@%s" % (
+        scheme,
+        urllib.quote(username, safe=""),
+        urllib.quote(password, safe=""),
+        rest)
 
 def main(argv):
     parser = optparse.OptionParser(__doc__)
@@ -17,11 +26,13 @@ def main(argv):
                       default=".")
     parser.add_option("--git-dir", dest="git_dir")
     parser.add_option("--git-url", dest="git_url",
-                      default="https://github.com/jwal/jwallib")
+                      default="https://github.com/jwal")
     parser.add_option("--force-in-git", dest="force_in_git",
                       action="store_const", const=True, default=False)
     parser.add_option("--couchdb-url", dest="couchdb_url",
-                      default="https://jwal.cloudant.com/jwallib/")
+                      default="https://jwal.cloudant.com/")
+    parser.add_option("--couchdb-deploy-url", dest="couchdb_deploy_url")
+    parser.add_option("--couchdb-test-url", dest="couchdb_test_url")
     parser.add_option("--couchdb-username", dest="couchdb_username",
                       default="guessme")
     parser.add_option("--couchdb-password", dest="couchdb_password",
@@ -48,14 +59,23 @@ def main(argv):
     subprocess.check_call(cwd_script + ["git", "branch", "-a"])
     subprocess.check_call(cwd_script + ["python", "aptconfig.py",
                                         '{"distribution": "lucid"}'])
-    scheme, rest = options.couchdb_url.split("://", 1)
-    couchdb_url = "%s://%s:%s@%s" % (
-        scheme,
-        urllib.quote(options.couchdb_username, safe=""),
-        urllib.quote(options.couchdb_password, safe=""),
-        rest)
+    couchdb_url = add_user_to_url(options.couchdb_url,
+                                  options.couchdb_username,
+                                  options.couchdb_password)
+    if options.couchdb_test_url is None:
+        couchdb_test_url = posixpath.join(couchdb_url, "gitbrowser-testing")
+    else:
+        couchdb_test_url = add_user_to_url(options.couchdb_test_url,
+                                           options.couchdb_username,
+                                           options.couchdb_password)
+    if options.couchdb_deploy_url is None:
+        couchdb_deploy_url = posixpath.join(couchdb_url, "jwallib")
+    else:
+        couchdb_deploy_url = add_user_to_url(options.couchdb_deploy_url,
+                                             options.couchdb_username,
+                                             options.couchdb_password)
     subprocess.check_call(cwd_script + ["python", "gitcouchdbsync.py", 
-                                        couchdb_url])
+                                        couchdb_deploy_url])
     virtualenv_path = os.path.join(home_path, "couchapp_env")
     virtualenv_activate = os.path.join(virtualenv_path, "bin", "activate")
     env_script = ["bash", "-c",
@@ -68,7 +88,7 @@ def main(argv):
     subprocess.check_call(env_script + cwd_script 
                           + ["python", "selfcouchapp.py",
                              "--app-subdir", "gitbrowser",
-                             couchdb_url])
+                             couchdb_deploy_url])
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))
