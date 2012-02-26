@@ -31,7 +31,34 @@ def put(url, document):
         c.perform()
         return json.loads(out.getvalue())
 
-def post(url, document, id_template="%s"):
+def temp_view(url, view):
+    url = url.encode("ascii")
+    with contextlib.closing(curl.Curl()) as c:
+        c.setopt(c.URL, url)
+        out = StringIO()
+        c.setopt(c.WRITEFUNCTION, out.write)
+        c.setopt(c.POST, True)
+        c.setopt(c.HTTPHEADER, ["Content-Type: application/json"])
+        c.setopt(c.POSTFIELDS, json.dumps(view))
+        c.perform()
+        return json.loads(out.getvalue())
+
+def delete(url, rev=None):
+    url = url.encode("ascii")
+    if rev is None:
+        rev = get(url)["_rev"]
+    with contextlib.closing(curl.Curl()) as c:
+        c.setopt(c.URL, url)
+        c.setopt(c.CUSTOMREQUEST, "DELETE")
+        out = StringIO()
+        c.setopt(c.WRITEFUNCTION, out.write)
+        c.setopt(c.HTTPHEADER, ["If-Match: %s" % (json.dumps(rev),)])
+        c.perform()
+        result = json.loads(out.getvalue())
+        if not result.get("ok", False):
+            raise Exception(result)
+
+def post_new(url, document, id_template="%s"):
     # The couchdb documentation suggests that POST should be avoided,
     # so emulate it by allocating a UUID and trying to PUT to it until
     # it finds one that isn't already used.

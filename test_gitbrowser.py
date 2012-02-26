@@ -4,7 +4,8 @@
 %prog [options] -- [UNITTEST2_ARGS...]
 """
 
-from couchdblib import get, put, post, put_update, url_quote
+from couchdblib import (get, put, post_new, put_update, url_quote, temp_view,
+                        delete)
 from jwalutil import add_user_to_url
 import datetime
 import optparse
@@ -23,11 +24,21 @@ class GitbrowserSeleniumTests(unittest2.TestCase):
 
     def _run_test(self):
         # Wipe out all git-related documents and the design document
+        map_func = """\
+function (doc) {
+  if (doc._id.substr(0, 4) == "git-") {
+    emit(null, doc._id);
+  }
+}
+"""
+        result = temp_view(posixpath.join(self.couchdb_url, "_temp_view"),
+                           {"map": map_func})
+        for item in result["rows"]:
+            delete(posixpath.join(self.couchdb_url, url_quote(item["id"])))
         # Populate a test GIT repository
         # Copy the git repository to the couchdb
         # Upload the gitbrowser to the couchdb design document
         # Run selenium testing against the public URL
-        pass
 
     def test(self):
         def now():
@@ -39,7 +50,8 @@ class GitbrowserSeleniumTests(unittest2.TestCase):
             "end_time": "",
             "status": "pending",
             }
-        result = post(self.couchdb_url, document, id_template="test-run-%s")
+        result = post_new(self.couchdb_url, document, 
+                          id_template="test-run-%s")
         my_url = posixpath.join(self.couchdb_url, url_quote(result["id"]))
         queue_url = posixpath.join(self.couchdb_url, "test-queue")
         def append_to_queue(queued):
@@ -79,11 +91,13 @@ class GitbrowserSeleniumTests(unittest2.TestCase):
                             self._run_test()
                         except AssertionError:
                             status = "failed"
+                            raise
                         except Exception:
                             status = "error"
+                            raise
                         else:
                             status = "passed"
-                        return
+                            return
                     finally:
                         put_update(my_url, mark_stopped)
                 else:
