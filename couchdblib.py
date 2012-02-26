@@ -52,7 +52,7 @@ def post(url, document, id_template="%s"):
             result = json.loads(out.getvalue())
             if "id" in result:
                 return result
-            if result["error"] != "conflict":
+            if result.get("error") != "conflict":
                 raise Exception(result)
         i += 1
     

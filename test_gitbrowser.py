@@ -5,6 +5,7 @@
 """
 
 from couchdblib import get, put, post, put_update, url_quote
+from jwalutil import add_user_to_url
 import datetime
 import optparse
 import os
@@ -26,6 +27,7 @@ class GitbrowserSeleniumTests(unittest2.TestCase):
         # Copy the git repository to the couchdb
         # Upload the gitbrowser to the couchdb design document
         # Run selenium testing against the public URL
+        pass
 
     def test(self):
         def now():
@@ -48,7 +50,7 @@ class GitbrowserSeleniumTests(unittest2.TestCase):
         def remove_from_queue(queued):
             queue = queued.get("queue", [])
             queue = [e for e in queue if e.get("_id") != result["id"]]
-            queued["queue"] = queued
+            queued["queue"] = queue
         put_update(queue_url, append_to_queue)
         try:
             while True:
@@ -67,7 +69,7 @@ class GitbrowserSeleniumTests(unittest2.TestCase):
                              "start_time": now()})
                     status = "aborted"
                     def mark_stopped(job):
-                        job["status"].update(
+                        job.update(
                             {"status": status,
                              "stop_time": now()})
         # Mark the test as running 
@@ -81,6 +83,7 @@ class GitbrowserSeleniumTests(unittest2.TestCase):
                             status = "error"
                         else:
                             status = "passed"
+                        return
                     finally:
                         put_update(my_url, mark_stopped)
                 else:
@@ -109,12 +112,9 @@ def setup_globals_and_home(options, on_error=on_error_raise):
         subprocess.check_call(["git", "clone", options.git_url, source_path])
     cwd_script = ["bash", "-c", 'cd "$1" && shift && exec "$@"', "-", 
                   source_path]
-    scheme, rest = options.couchdb_url.split("://", 1)
-    couchdb_url = "%s://%s:%s@%s" % (
-        scheme,
-        urllib.quote(options.couchdb_username, safe=""),
-        urllib.quote(options.couchdb_password, safe=""),
-        rest)
+    couchdb_url = add_user_to_url(options.couchdb_url,
+                                  options.couchdb_username,
+                                  options.couchdb_password)
     # subprocess.check_call(cwd_script + ["python", "gitcouchdbsync.py", 
     #                                     couchdb_url])
     virtualenv_path = os.path.join(home_path, "couchapp_env")

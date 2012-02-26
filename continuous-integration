@@ -5,20 +5,12 @@
 %prog [options]
 """
 
+from jwalutil import add_user_to_url
 import optparse
 import os
 import posixpath
 import subprocess
 import sys
-import urllib
-
-def add_user_to_url(base_url, username, password):
-    scheme, rest = base_url.split("://", 1)
-    return "%s://%s:%s@%s" % (
-        scheme,
-        urllib.quote(username, safe=""),
-        urllib.quote(password, safe=""),
-        rest)
 
 def main(argv):
     parser = optparse.OptionParser(__doc__)

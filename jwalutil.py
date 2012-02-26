@@ -4,6 +4,7 @@ import contextlib
 import shutil
 import string
 import tempfile
+import urllib
 
 try:
     from cStringIO import StringIO
@@ -66,3 +67,11 @@ def mkdtemp(*a, **kw):
         yield temp_dir_path
     finally:
         shutil.rmtree(temp_dir_path)
+
+def add_user_to_url(base_url, username, password):
+    scheme, rest = base_url.split("://", 1)
+    return "%s://%s:%s@%s" % (
+        scheme,
+        urllib.quote(username, safe=""),
+        urllib.quote(password, safe=""),
+        rest)
