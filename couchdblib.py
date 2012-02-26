@@ -103,7 +103,7 @@ def put_update(url, update_func):
             print i, "The race is on!"
         old_doc = get(url)
         if (old_doc.get("error") == "not_found" 
-            and old_doc.get("reason") == "missing"):
+            and old_doc.get("reason") in ("missing", "deleted")):
             old_doc = {}
             old_rev = None
         else:

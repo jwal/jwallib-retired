@@ -4,9 +4,11 @@
 %prog [options] -- [UNITTEST2_ARGS...]
 """
 
+from __future__ import with_statement
+
 from couchdblib import (get, put, post_new, put_update, url_quote, temp_view,
                         delete)
-from jwalutil import add_user_to_url
+from jwalutil import add_user_to_url, mkdtemp
 import datetime
 import optparse
 import os
@@ -19,7 +21,7 @@ import urllib
 
 class GitbrowserSeleniumTests(unittest2.TestCase):
 
-    source_dir = NotImplemented
+    source_path = NotImplemented
     couchdb_url = NotImplemented
 
     def _run_test(self):
@@ -36,7 +38,43 @@ function (doc) {
         for item in result["rows"]:
             delete(posixpath.join(self.couchdb_url, url_quote(item["id"])))
         # Populate a test GIT repository
+        with mkdtemp() as temp_dir:
+            cwd_script = ["bash", "-c", 'cd "$1" && shift && exec "$@"', "-", 
+                          temp_dir]
+            subprocess.check_call(cwd_script + ["git", "init"])
+        ## write file README
+            git = cwd_script + ["env", 
+                                "HOME=%s" % (temp_dir,),
+                                "git"]
+            subprocess.check_call(git + ["config", "user.name", "Tester"])
+            subprocess.check_call(git + ["config", "user.email", 
+                                         "fail@example.com"])
+            path = os.path.join(temp_dir, "README")
+            with open(path, "wb") as fh:
+                fh.write("Initial version of text file\r\n")
+            subprocess.check_call(git + ["add", path])
+            subprocess.check_call(git + ["commit", "-m", 
+                                         "Initial commit"])
+        ## write file README
+            with open(path, "wb") as fh:
+                fh.write("Just a minimal git repository for testing\r\n")
+            subprocess.check_call(git + ["add", path])
+        ## write file binary 
+            path = os.path.join(temp_dir, "binary-file")
+            with open(path, "wb") as fh:
+                fh.write("".join(chr(i) for i in range(2**8)))
+            subprocess.check_call(git + ["add", path])
+        ## write file subfolder/README 
+            path = os.path.join(temp_dir, "subfolder", "README")
+            os.makedirs(os.path.dirname(path))
+            with open(path, "wb") as fh:
+                fh.write("A file in a subfolder\r\n")
+            subprocess.check_call(git + ["add", path])
+            subprocess.check_call(git + ["commit", "-m", "Update"])
         # Copy the git repository to the couchdb
+            sync_script = os.path.join(self.source_path, "gitcouchdbsync.py")
+            subprocess.check_call(cwd_script + ["python", sync_script,
+                                                self.couchdb_url])
         # Upload the gitbrowser to the couchdb design document
         # Run selenium testing against the public URL
 
@@ -122,6 +160,7 @@ def setup_globals_and_home(options, on_error=on_error_raise):
         source_path = os.path.join(home_path, "git", "jwallib")
     else:
         source_path = os.path.abspath(options.source_dir)
+    GitbrowserSeleniumTests.source_path = source_path
     if not os.path.exists(source_path):
         subprocess.check_call(["git", "clone", options.git_url, source_path])
     cwd_script = ["bash", "-c", 'cd "$1" && shift && exec "$@"', "-", 
