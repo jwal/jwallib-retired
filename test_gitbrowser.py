@@ -28,7 +28,8 @@ class GitbrowserSeleniumTests(unittest2.TestCase):
         # Wipe out all git-related documents and the design document
         map_func = """\
 function (doc) {
-  if (doc._id.substr(0, 4) == "git-") {
+  var prefix  = "git-";
+  if (doc._id.substr(0, prefix.length) == prefix) {
     emit(null, doc._id);
   }
 }
@@ -79,9 +80,30 @@ function (doc) {
         # Run selenium testing against the public URL
 
     def test(self):
+        # Clean up any partially aborted test runs
+        def mark_aborted(doc):
+            doc.update({"status": "aborted"})
+        queue_url = posixpath.join(self.couchdb_url, "test-queue")
+        queued_ids = set(i["_id"] for i in get(queue_url)["queue"])
+        map_func = """\
+function (doc) {
+  var prefix = "test-run-";
+  if (doc._id.substr(0, prefix.length) == prefix) {
+    if (doc.status == "pending") {
+      emit(null, doc._id);
+    }
+  }
+}
+"""
+        result = temp_view(posixpath.join(self.couchdb_url, "_temp_view"),
+                           {"map": map_func})
+        pending_ids = set(i["id"] for i in result["rows"])
+        for missing_id in pending_ids - queued_ids:
+            put_update(posixpath.join(self.couchdb_url, url_quote(missing_id)),
+                       mark_aborted)
+        # Add this test run to the queue on the shared database
         def now():
             return datetime.datetime.utcnow().isoformat() + "Z"
-        # Add this test run to the queue on the shared database
         document = {
             "request_time": now(),
             "start_time": "",
@@ -91,7 +113,6 @@ function (doc) {
         result = post_new(self.couchdb_url, document, 
                           id_template="test-run-%s")
         my_url = posixpath.join(self.couchdb_url, url_quote(result["id"]))
-        queue_url = posixpath.join(self.couchdb_url, "test-queue")
         def append_to_queue(queued):
             queued.setdefault("queue", []).append(
                 {"_id": result["id"],
