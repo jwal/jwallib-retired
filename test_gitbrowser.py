@@ -7,7 +7,7 @@
 from __future__ import with_statement
 
 from couchdblib import (get, put, post_new, put_update, url_quote, temp_view,
-                        delete)
+                        delete, couchapp)
 from jwalutil import add_user_to_url, mkdtemp
 import datetime
 import optparse
@@ -23,13 +23,14 @@ class GitbrowserSeleniumTests(unittest2.TestCase):
 
     source_path = NotImplemented
     couchdb_url = NotImplemented
+    couchapp = NotImplemented
 
     def _run_test(self):
         # Wipe out all git-related documents and the design document
         map_func = """\
 function (doc) {
-  var prefix  = "git-";
-  if (doc._id.substr(0, prefix.length) == prefix) {
+  var prefix  = "test-";
+  if (doc._id.substr(0, prefix.length) != prefix) {
     emit(null, doc._id);
   }
 }
@@ -77,6 +78,9 @@ function (doc) {
             subprocess.check_call(cwd_script + ["python", sync_script,
                                                 self.couchdb_url])
         # Upload the gitbrowser to the couchdb design document
+        gitbrowser_source_path = os.path.join(self.source_path, "gitbrowser")
+        couchapp(posixpath.join(self.couchdb_url, "_design", "gitbrowser"), 
+                 gitbrowser_source_path, couchapp=self.couchapp)
         # Run selenium testing against the public URL
 
     def test(self):
@@ -205,6 +209,7 @@ def setup_globals_and_home(options, on_error=on_error_raise):
     #                          couchdb_url])
     GitbrowserSeleniumTests.source_path = source_path
     GitbrowserSeleniumTests.couchdb_url = couchdb_url
+    GitbrowserSeleniumTests.couchapp = env_script + ["couchapp"]
 
 def main(prog, argv):
     parser = optparse.OptionParser(prog=prog)

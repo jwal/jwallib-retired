@@ -19,7 +19,14 @@ def call(argv, **kwargs):
     if do_wait:
         stdout, stderr = child.communicate()
         if do_check:
-            assert child.returncode == rc, (child.returncode, argv, stdout)
+            if child.returncode != rc:
+                raise Exception("""\
+Child process error:
+  returncode=%r
+  argv=%r
+  stdout...
+%s
+""" % (child.returncode, argv, stdout))
         if do_crlf_fix and stdout is not None:
             # print "@@@", repr(stdout)
             stdout = stdout.replace("\r\n", "\n").replace("\n", "\r\n")

@@ -1,8 +1,10 @@
 from __future__ import with_statement
 
 from jwalutil import StringIO
+from process import call
 import contextlib
 import json
+import os
 import posixpath
 import pycurl as curl
 import urllib
@@ -131,3 +133,8 @@ def put_update(url, update_func):
             new_doc["_id"] = result["id"]
             return new_doc
         i += 1
+
+def couchapp(url, local_path, couchapp=("couchapp",)):
+    url = url.encode("ascii")
+    local_path = os.path.abspath(local_path)
+    call(list(couchapp) + ["push", local_path, url])

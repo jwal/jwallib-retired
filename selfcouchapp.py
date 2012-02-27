@@ -35,11 +35,10 @@ contains the stable and topic branches and both design documents.
 
 from __future__ import with_statement
 
-from couchdblib import get
+from couchdblib import get, couchapp
 from jwalutil import mkdtemp
 from posixutils import symbolic_to_octal_mode
 from pprint import pformat
-from process import call
 import base64
 import optparse
 import os
@@ -114,7 +113,7 @@ def sync_batch(git_couchdb_url, design_couchdb_url, branch, app_subdir):
                        tree)
             if os.path.exists(os.path.join(local_dir, "_id")):
                 os.unlink(os.path.join(local_dir, "_id"))
-            call(["couchapp", "push", local_dir, design_couchdb_url])
+            couchapp(design_couchdb_url, local_dir)
             print "...done %r" % (branch,)
             
 
