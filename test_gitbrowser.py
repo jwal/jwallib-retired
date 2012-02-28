@@ -6,9 +6,10 @@
 
 from __future__ import with_statement
 
-from couchdblib import (get, put, post_new, put_update, url_quote, temp_view,
-                        delete, couchapp)
-from jwalutil import add_user_to_url, mkdtemp
+from couchdblib import delete, couchapp
+from couchdblib import get, put, post_new, put_update, url_quote, temp_view
+from jwalutil import add_user_to_url, mkdtemp, monkey_patch_attr
+import contextlib
 import datetime
 import optparse
 import os
@@ -23,7 +24,6 @@ class GitbrowserSeleniumTests(unittest2.TestCase):
 
     source_path = NotImplemented
     couchdb_url = NotImplemented
-    couchapp = NotImplemented
 
     def _run_test(self):
         # Wipe out all git-related documents and the design document
@@ -79,8 +79,8 @@ function (doc) {
                                                 self.couchdb_url])
         # Upload the gitbrowser to the couchdb design document
         gitbrowser_source_path = os.path.join(self.source_path, "gitbrowser")
-        couchapp(posixpath.join(self.couchdb_url, "_design", "gitbrowser"), 
-                 gitbrowser_source_path, couchapp=self.couchapp)
+        couchapp(posixpath.join(self.couchdb_url, "_design/gitbrowser"), 
+                 gitbrowser_source_path)
         # Run selenium testing against the public URL
 
     def test(self):
@@ -173,43 +173,18 @@ function (doc) {
 def on_error_raise(message=""):
     raise Exception(message)
 
-def setup_globals_and_home(options, on_error=on_error_raise):
-    home_path = os.path.abspath(options.home_dir)
-    container_git_path = os.path.join(home_path, ".git")
-    if not options.force_in_git and os.path.exists(container_git_path):
-        return on_error("Home directory seems to be a git repository, "
-                        "are you sure about this? %r" % (container_git_path,))
-    if options.do_clean_home:
-        subprocess.check_call(["rm", "-rf", "--one-file-system", home_path])
-    if options.source_dir is None:
-        source_path = os.path.join(home_path, "git", "jwallib")
-    else:
-        source_path = os.path.abspath(options.source_dir)
-    GitbrowserSeleniumTests.source_path = source_path
-    if not os.path.exists(source_path):
-        subprocess.check_call(["git", "clone", options.git_url, source_path])
-    cwd_script = ["bash", "-c", 'cd "$1" && shift && exec "$@"', "-", 
-                  source_path]
+@contextlib.contextmanager
+def setup_globals(options):
+    source_path = os.path.dirname(os.path.abspath(__file__))
     couchdb_url = add_user_to_url(options.couchdb_url,
                                   options.couchdb_username,
                                   options.couchdb_password)
-    # subprocess.check_call(cwd_script + ["python", "gitcouchdbsync.py", 
-    #                                     couchdb_url])
-    virtualenv_path = os.path.join(home_path, "couchapp_env")
-    virtualenv_activate = os.path.join(virtualenv_path, "bin", "activate")
-    env_script = ["bash", "-c",
-                  'source "$1" && shift && exec "$@"', "-",
-                  virtualenv_activate]
-    if not os.path.exists(virtualenv_path):
-        subprocess.check_call(["virtualenv", virtualenv_path])
-        subprocess.check_call(env_script + ["pip", "install", "couchapp"])
-    # subprocess.check_call(env_script + cwd_script 
-    #                       + ["python", "selfcouchapp.py",
-    #                          "--app-subdir", "gitbrowser",
-    #                          couchdb_url])
-    GitbrowserSeleniumTests.source_path = source_path
-    GitbrowserSeleniumTests.couchdb_url = couchdb_url
-    GitbrowserSeleniumTests.couchapp = env_script + ["couchapp"]
+    with contextlib.nested(
+        monkey_patch_attr(
+            GitbrowserSeleniumTests, "source_path", source_path), 
+        monkey_patch_attr(
+            GitbrowserSeleniumTests, "couchdb_url", couchdb_url)):
+        yield
 
 def main(prog, argv):
     parser = optparse.OptionParser(prog=prog)
@@ -221,7 +196,7 @@ def main(prog, argv):
     parser.add_option("--force-in-git", dest="force_in_git",
                       action="store_const", const=True, default=False)
     parser.add_option("--couchdb-url", dest="couchdb_url",
-                      default="https://jwal.cloudant.com/gitbrowser-testing")
+                      default="http://localhost:5984/gitbrowser-testing")
     parser.add_option("--couchdb-username", dest="couchdb_username",
                       default="guessme")
     parser.add_option("--couchdb-password", dest="couchdb_password",
@@ -230,8 +205,8 @@ def main(prog, argv):
                       action="store_const", dest="do_clean_home")
     options, args = parser.parse_args(argv)
     unittest_argv = [prog] + args
-    setup_globals_and_home(options, on_error=on_error_raise)
-    unittest2.main(argv=unittest_argv)
+    with setup_globals(options):
+        unittest2.main(argv=unittest_argv)
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[0], sys.argv[1:]))

@@ -35,7 +35,7 @@ contains the stable and topic branches and both design documents.
 
 from __future__ import with_statement
 
-from couchdblib import get, couchapp
+from couchdblib import get, couchapp, url_quote
 from jwalutil import mkdtemp
 from posixutils import symbolic_to_octal_mode
 from pprint import pformat
@@ -104,7 +104,7 @@ def sync_batch(git_couchdb_url, design_couchdb_url, branch, app_subdir):
                 else:
                     raise Exception("Missing child %r" % (app_subdir,))
             existing = get(posixpath.join(design_couchdb_url, 
-                                          "_design/%s" % (basename,)))
+                                          "_design", url_quote(basename)))
             if existing.get("couchapp_git_tree_id") == tree:
                 continue
             print "Updating %r..." % (branch,)

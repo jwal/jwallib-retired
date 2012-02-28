@@ -1,5 +1,7 @@
 # Copyright 2011 James Ascroft-Leigh
 
+from __future__ import with_statement
+
 import contextlib
 import shutil
 import string
@@ -67,6 +69,27 @@ def mkdtemp(*a, **kw):
         yield temp_dir_path
     finally:
         shutil.rmtree(temp_dir_path)
+
+@contextlib.contextmanager
+def maybe_with(param, cm):
+    if param is None:
+        with cm() as result:
+            yield result
+    else:
+        yield param
+
+@contextlib.contextmanager
+def monkey_patch_attr(obj, attr, value):
+    undefined = object()
+    orig = getattr(obj, attr, undefined)
+    setattr(obj, attr, value)
+    try:
+        yield
+    finally:
+        if orig is undefined:
+            delattr(obj, attr)
+        else:
+            setattr(obj, attr, orig)
 
 def add_user_to_url(base_url, username, password):
     scheme, rest = base_url.split("://", 1)

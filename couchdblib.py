@@ -134,7 +134,7 @@ def put_update(url, update_func):
             return new_doc
         i += 1
 
-def couchapp(url, local_path, couchapp=("couchapp",)):
+def couchapp(url, local_path):
     url = url.encode("ascii")
     local_path = os.path.abspath(local_path)
-    call(list(couchapp) + ["push", local_path, url])
+    call(["couchapp", "push", local_path, url])
