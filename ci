@@ -1,0 +1,186 @@
+#!/usr/bin/python
+# -*- mode: python -*-
+
+"""\
+%prog [options]
+
+This program is designed for the continuous build, test and deployment
+process.  A secondary purpose is to run on a development workstation
+for the purposes of recreating and deugging any continuous build, test
+and deployment failures.
+
+As such it expects to execute with the current working directory
+pointing to some "home directory" or "workspace".  The contents of
+this workspace are:
+
+   ./git/jwallib      
+
+                     - The source tree. Maintained by the CI framework
+                       so that it can report on the changes since last
+                       build and poll for SCM changes.
+
+   ./couchapp_env
+   
+                     - A python virtualenv prefix into which this
+                       script will install the couchapp utility and
+                       dependencies.
+
+If the program detects that it is being run from a git repository (by
+the presence of a ./.git directory) then it assumes that it is running
+on a development workstation.  In this case it makes a fresh,
+temporary home directory and cleans it up after completion.  The
+git/jwallib sub-directory is built from the detected git repository,
+including a fresh commit of any local changes.  Note that local
+changes are only committed to a temporary repository that is then
+discarded.
+
+As a third mode of operation, the script has no import dependencies
+outside of the standard library so it can be called directly from
+Github like this:
+
+python -c "$( wget -O - https://github.com/jwal/jwallib/ci )"
+
+In this mode of operation, detected by the python interpreter having
+no __file__ variable on the __main__ module, the script will allocate
+a temporary working directory and clone the jwallib git repository
+from github.
+
+"""
+
+try:
+    from jwalutil import add_user_to_url
+except ImportError:
+    def add_user_to_url(base_url, username, password):
+        scheme, rest = base_url.split("://", 1)
+        return "%s://%s:%s@%s" % (
+            scheme,
+            urllib.quote(username, safe=""),
+            urllib.quote(password, safe=""),
+            rest)
+
+import optparse
+import os
+import posixpath
+import subprocess
+import sys
+
+def find_git_dir(start_dir="."):
+    start_dir = os.path.abspath(start_dir)
+    while True:
+        candidate = os.path.join(start_dir, ".git")
+        if os.path.exists(candidate):
+            return candidate
+        if os.path.dirname(start_dir) == start_dir:
+            return None
+        start_dir = os.path.dirname(start_dir)
+
+def main(argv):
+    parser = optparse.OptionParser(__doc__)
+    parser.add_option("--home-dir", dest="home_dir", default=None)
+    parser.add_option("--ci-mode", dest="mode", default="auto",
+                      action="store_const", const="ci")
+    parser.add_option("--dev-mode", dest="mode", default="auto",
+                      action="store_const", const="dev")
+    parser.add_option("--auto-mode", dest="mode", default="auto",
+                      action="store_const", const="auto")
+    parser.add_option("--download-mode", dest="mode", default="auto",
+                      action="store_const", const="download")
+    # TODO: Implement the mode switching and temp home dir and dev
+    # autodetect and dev autocommit as descrived in the docstring
+    parser.add_option("--git-working-copy", dest="git_working_copy_path",
+                      default=".")
+    parser.add_option("--git-url", dest="git_url",
+                      default="https://github.com/jwal/jwallib")
+    parser.add_option("--couchdb-url", dest="couchdb_url",
+                      default="https://jwal.cloudant.com/")
+    parser.add_option("--couchdb-deploy-url", dest="couchdb_deploy_url")
+    parser.add_option("--couchdb-test-url", dest="couchdb_test_url")
+    parser.add_option("--couchdb-username", dest="couchdb_username",
+                      default="guessme")
+    parser.add_option("--couchdb-password", dest="couchdb_password",
+                      default="guessme")
+    options, args = parser.parse_args(argv)
+    if len(args) > 0:
+        parser.error("Unexpected: %r" % (args,))
+    home_path = os.path.abspath(options.home_dir)
+    container_git_path = os.path.join(home_path, ".git")
+    mode = options.mode
+    if mode == "auto":
+        if "__file__" not in globals().keys():
+            mode = "download"
+        elif find_git_dir() is not None:
+            mode = "dev"
+        else:
+            mode = "ci"
+    if mode == "download":
+        git_url = options.git_url
+        with mkdtemp() as temp_dir:
+            git_fetch(git_url, temp_dir/"git"/"jwallib")
+            virtualenv_setup(temp_dir/"couchapp_env")
+            run_tests()
+    elif mode == "dev":
+        with mkdtemp() as temp_dir:
+            git_clone(find_git_dir(), temp_dir/"git"/"jwallib")
+            if git_status(find_git_dir()) == "unclean":
+                patch = git_generate_patch(find_git_dir())
+                git_apply_patch(patch, temp_dir/"git"/"jwallib")
+            virtualenv_setup(temp_dir/"couchapp_env")
+            run_tests()
+    elif mode == "ci":
+        if not os.path.exists(home_dir/"couchapp_env"):
+            virtualenv_setup(temp_dir/"couchapp_env")
+        run_tests()
+    else:
+        raise NotImplementedError(mode)
+
+
+
+ 
+
+    if options.git_dir is None:
+        git_path = os.path.join(home_path, "git", "jwallib")
+    else:
+        git_path = os.path.abspath(options.git_dir)
+    if not os.path.exists(git_path):
+        subprocess.check_call(["git", "clone", options.git_url, git_path])
+    cwd_script = ["bash", "-c", 'cd "$1" && shift && exec "$@"', "-", git_path]
+    subprocess.check_call(cwd_script + ["git", "checkout", "master"])
+    subprocess.check_call(cwd_script + ["git", "reset", "--hard", 
+                                        "remotes/origin/master"])
+    subprocess.check_call(cwd_script + ["git", "log", "-1"])
+    subprocess.check_call(cwd_script + ["git", "branch", "-a"])
+    subprocess.check_call(cwd_script + ["python", "aptconfig.py",
+                                        '{"distribution": "lucid"}'])
+    couchdb_url = add_user_to_url(options.couchdb_url,
+                                  options.couchdb_username,
+                                  options.couchdb_password)
+    if options.couchdb_test_url is None:
+        couchdb_test_url = posixpath.join(couchdb_url, "gitbrowser-testing")
+    else:
+        couchdb_test_url = add_user_to_url(options.couchdb_test_url,
+                                           options.couchdb_username,
+                                           options.couchdb_password)
+    if options.couchdb_deploy_url is None:
+        couchdb_deploy_url = posixpath.join(couchdb_url, "jwallib")
+    else:
+        couchdb_deploy_url = add_user_to_url(options.couchdb_deploy_url,
+                                             options.couchdb_username,
+                                             options.couchdb_password)
+    subprocess.check_call(cwd_script + ["python", "gitcouchdbsync.py", 
+                                        couchdb_deploy_url])
+    virtualenv_path = os.path.join(home_path, "couchapp_env")
+    virtualenv_activate = os.path.join(virtualenv_path, "bin", "activate")
+    env_script = ["bash", "-c",
+                  'source "$1" && shift && exec "$@"', "-",
+                  virtualenv_activate]
+    if not os.path.exists(virtualenv_path):
+        subprocess.check_call(["virtualenv", virtualenv_path])
+        subprocess.check_call(env_script + ["pip", "install", "couchapp"])
+    subprocess.check_call(env_script + ["couchapp", "--version"])
+    subprocess.check_call(env_script + cwd_script 
+                          + ["python", "selfcouchapp.py",
+                             "--app-subdir", "gitbrowser",
+                             couchdb_deploy_url])
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
