@@ -43,9 +43,18 @@ import posixpath
 import subprocess
 import sys
 
+# Copied from jwalutil?
+def add_user_to_url(base_url, username, password):
+    scheme, rest = base_url.split("://", 1)
+    return "%s://%s:%s@%s" % (
+        scheme,
+        urllib.quote(username, safe=""),
+        urllib.quote(password, safe=""),
+        rest)
+
 def main(argv):
     parser = optparse.OptionParser(__doc__)
-    parser.add_option("--home-dir", dest="home_dir",
+    parser.add_option("--home-dir", dest="home_dir_path",
                       default=".")
     parser.add_option("--ci-mode", dest="mode", default="auto",
                       action="store_const", const="ci")
@@ -53,11 +62,12 @@ def main(argv):
                       action="store_const", const="dev")
     parser.add_option("--auto-mode", dest="mode", default="auto",
                       action="store_const", const="auto")
+    parser.add_option("--download-mode", dest="mode", default="auto",
+                      action="store_const", const="download")
     # TODO: Implement the mode switching and temp home dir and dev
     # autodetect and dev autocommit as descrived in the docstring
-    parser.add_option("--git-dir", dest="git_dir")
-    parser.add_option("--git-url", dest="git_url",
-                      default="https://github.com/jwal/jwallib")
+    parser.add_option("--git-working-copy", dest="git_working_copy_path",
+                      default=".")
     parser.add_option("--couchdb-url", dest="couchdb_url",
                       default="https://jwal.cloudant.com/")
     parser.add_option("--couchdb-deploy-url", dest="couchdb_deploy_url")
@@ -69,21 +79,21 @@ def main(argv):
     options, args = parser.parse_args(argv)
     if len(args) > 0:
         parser.error("Unexpected: %r" % (args,))
-    home_path = os.path.abspath(options.home_dir)
+    home_path = os.path.abspath(options.home_dir_path)
     container_git_path = os.path.join(home_path, ".git")
     if options.mode == "auto":
         if os.path.exists(container_git_path):
-            home_dir = None
-            git_source = os.path.abspath(".")
+            home_dir_path = None
+            git_source_path = os.path.abspath(options.git_working_copy_path)
         else:
-            home_dir = os.path.abspath(".")
-            git_source = None
+            home_dir_path = os.path.abspath(options.home_dir_path)
+            git_source_path = None
     elif mode == "ci":
-        home_dir = os.path.abspath(".")
-        git_source = None
+        home_dir_path = os.path.abspath(".")
+        git_source_path = None
     elif mode == "dev":
-        home_dir = None
-        git_source = os.path.abspath(".")
+        home_dir_path = None
+        git_source_path = os.path.abspath(".")
     else:
         raise NotImplemented(mode)
     if options.git_dir is None:
