@@ -169,6 +169,10 @@ def main(argv):
                       default="guessme")
     parser.add_option("--couchdb-password", dest="couchdb_password",
                       default="guessme")
+    parser.add_option("--saucelabs-username", dest="saucelabs_username",
+                      default="guessme")
+    parser.add_option("--saucelabs-password", dest="saucelabs_password",
+                      default="guessme")
     parser.add_option("--deploy", dest="do_deploy", default=False,
                       action="store_const", const=True, 
                       help=("Deploy if the tests pass"))
@@ -218,31 +222,36 @@ def main(argv):
             subprocess.check_call(["virtualenv", virtualenv_path])
             subprocess.check_call(env_script + ["pip", "install", "couchapp"])
             subprocess.check_call(env_script + ["pip", "install", "nose"])
+            subprocess.check_call(env_script + ["pip", "install", "selenium"])
         subprocess.check_call(env_script + ["couchapp", "--version"])
         #subprocess.check_call(cwd_script + ["git", "checkout", "master"])
         #subprocess.check_call(cwd_script + ["git", "reset", "--hard", 
         #                                    "remotes/origin/master"])
         subprocess.check_call(cwd_script + ["git", "log", "-1"])
         subprocess.check_call(cwd_script + ["git", "branch", "-a"])
-        subprocess.check_call(env_script + cwd_script + ["nosetests"])
-#        subprocess.check_call(cwd_script + ["python", "aptconfig.py",
-#                                            '{"distribution": "lucid"}'])
-#        couchdb_url = add_user_to_url(options.couchdb_url,
-#                                      options.couchdb_username,
-#                                      options.couchdb_password)
-#        if options.couchdb_test_url is None:
-#            couchdb_test_url = posixpath.join(
-#                couchdb_url, "gitbrowser-testing")
-#        else:
-#            couchdb_test_url = add_user_to_url(options.couchdb_test_url,
-#                                               options.couchdb_username,
-#                                               options.couchdb_password)
-#        subprocess.check_call(
-#            env_script
-#            + ["bash", "-c", 
-#               'export PYTHONPATH="$1:$PYTHONPATH" && shift && exec "$@"', "-",
-#               git_path,
-#               "python", "-m", "test_gitbrowser"])
+#        subprocess.check_call(env_script + cwd_script + ["nosetests"])
+        subprocess.check_call(env_script + cwd_script
+                              + ["python", "test_aptconfig.py", "-v"])
+        subprocess.check_call(env_script + cwd_script
+                              + ["python", "test_shellescape.py", "-v"])    	
+        couchdb_url = options.couchdb_url
+        if options.couchdb_test_url is None:
+            couchdb_test_url = posixpath.join(
+                couchdb_url, "gitbrowser-testing")
+        else:
+            couchdb_test_url = options.couchdb_test_url
+        argv = ["python", "-m", "test_gitbrowser"]
+        argv.extend(["--couchdb-url", couchdb_test_url])
+        argv.extend(["--couchdb-username", options.couchdb_username])
+        argv.extend(["--couchdb-password", options.couchdb_password])
+        argv.extend(["--saucelabs-username", options.saucelabs_username])
+        argv.extend(["--saucelabs-password", options.saucelabs_password])
+        argv.extend(["--", "--verbose"])
+        subprocess.check_call(
+            env_script
+            + ["bash", "-c", 
+               'export PYTHONPATH="$1:$PYTHONPATH" && shift && exec "$@"', "-",
+               git_path] + argv)
         if options.do_deploy:
             if options.couchdb_deploy_url is None:
                 couchdb_deploy_url = posixpath.join(couchdb_url, "jwallib")
