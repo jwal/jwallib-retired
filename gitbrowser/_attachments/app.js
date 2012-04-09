@@ -221,10 +221,6 @@ function show_file_or_folder(app, branch_name, revision, path)
 				  + "monospace;\"></td>");
 		mode_span.text(doc.children[i].mode);
 		li.append(mode_span);
-		var basename_span = $("<th style=\"text-align: "
-				      + "left;\"></th>");
-		basename_span.text(doc.children[i].basename);
-		li.append(basename_span);
 		var sha_cell = $("<td style=\"font-family: "
 				 + "monospace;\"></td>");
 		var a = $("<a></a>");
@@ -232,7 +228,7 @@ function show_file_or_folder(app, branch_name, revision, path)
 		child_path.push(doc.children[i].basename);
 		a.attr("href", make_show_url(branch_name, revision, 
 					     child_path));
-		a.text(doc.children[i].child.sha);
+		a.text(doc.children[i].basename);
 		sha_cell.append(a);
 		li.append(sha_cell);
 		table.append(li);

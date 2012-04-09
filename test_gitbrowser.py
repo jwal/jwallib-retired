@@ -28,6 +28,27 @@ class GitbrowserSeleniumTests(unittest.TestCase):
     saucelabs_url = NotImplemented
     public_url = NotImplemented
 
+    def _the_actual_tests(self, driver):
+        self.assertTrue("Just a minimal git repository for testing" 
+                        in driver.find_element_by_xpath('//body').text)
+        driver.find_element_by_link_text("[up]").click()
+        driver.find_element_by_link_text("README").click()
+        self.assertTrue("Just a minimal git repository for testing" 
+                        in driver.find_element_by_xpath('//body').text)        
+        driver.find_element_by_link_text("[up]").click()    
+        driver.find_element_by_link_text("binary-file").click()
+        self.assertTrue("00000020  20 21 22 23 24 25 26 27  28 29 2a "
+                        "2b 2c 2d 2e 2f  | !\"#$%&'()*+,-./|"
+                        in driver.find_element_by_xpath('//body').text)
+        self.assertTrue("000000e0  e0 e1 e2 e3 e4 e5 e6 e7  e8 e9 ea "
+                        "eb ec ed ee ef  |................|"
+                        in driver.find_element_by_xpath('//body').text)
+        driver.find_element_by_link_text("[up]").click()    
+        driver.find_element_by_link_text("subfolder").click()
+        driver.find_element_by_link_text("README").click()
+        self.assertTrue("A file in a subfolder"
+                        in driver.find_element_by_xpath('//body').text)
+
     def _go_to_the_selenium_stage(self):
         desired_capabilities = webdriver.DesiredCapabilities.FIREFOX
         desired_capabilities["version"] = "6"
@@ -39,6 +60,7 @@ class GitbrowserSeleniumTests(unittest.TestCase):
         try:
             driver.implicitly_wait(30)
             driver.get(self.public_url)
+            self._the_actual_tests(driver)
         finally:
             driver.quit()
 
