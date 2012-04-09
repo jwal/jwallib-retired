@@ -6,6 +6,7 @@
 
 from __future__ import with_statement
 
+from selenium import webdriver
 from couchdblib import delete, couchapp
 from couchdblib import get, put, post_new, put_update, url_quote, temp_view
 from jwalutil import add_user_to_url, mkdtemp, monkey_patch_attr
@@ -24,6 +25,22 @@ class GitbrowserSeleniumTests(unittest.TestCase):
 
     source_path = NotImplemented
     couchdb_url = NotImplemented
+    saucelabs_url = NotImplemented
+    public_url = NotImplemented
+
+    def _go_to_the_selenium_stage(self):
+        desired_capabilities = webdriver.DesiredCapabilities.FIREFOX
+        desired_capabilities["version"] = "6"
+        desired_capabilities["platform"] = "XP"
+        desired_capabilities["name"] = "Git Browser selenium tests"
+        driver = webdriver.Remote(
+            desired_capabilities=desired_capabilities,
+            command_executor=self.saucelabs_url)
+        try:
+            driver.implicitly_wait(30)
+            driver.get(self.public_url)
+        finally:
+            driver.quit()
 
     def _run_test(self):
         # Wipe out all git-related documents and the design document
@@ -74,6 +91,7 @@ class GitbrowserSeleniumTests(unittest.TestCase):
             subprocess.check_call(cwd_script + ["python", sync_script,
                                                 self.couchdb_url])
         # Run selenium testing against the public URL
+        self._go_to_the_selenium_stage()
 
     def test(self):
         # Clean up any partially aborted test runs
@@ -193,11 +211,18 @@ def setup_globals(options):
     couchdb_url = add_user_to_url(options.couchdb_url,
                                   options.couchdb_username,
                                   options.couchdb_password)
+    saucelabs_url = add_user_to_url(options.saucelabs_url,
+                                    options.saucelabs_username,
+                                    options.saucelabs_password)
     with contextlib.nested(
         monkey_patch_attr(
             GitbrowserSeleniumTests, "source_path", source_path), 
         monkey_patch_attr(
-            GitbrowserSeleniumTests, "couchdb_url", couchdb_url)):
+            GitbrowserSeleniumTests, "couchdb_url", couchdb_url),
+        monkey_patch_attr(
+            GitbrowserSeleniumTests, "saucelabs_url", saucelabs_url),
+        monkey_patch_attr(
+            GitbrowserSeleniumTests, "public_url", options.public_url)):
         yield
 
 def main(prog, argv):
@@ -215,6 +240,14 @@ def main(prog, argv):
                       default="guessme")
     parser.add_option("--couchdb-password", dest="couchdb_password",
                       default="guessme")
+    parser.add_option("--saucelabs-url", dest="saucelabs_url",
+                      default="http://ondemand.saucelabs.com:80/wd/hub")
+    parser.add_option("--saucelabs-username", dest="saucelabs_username",
+                      default="guessme")
+    parser.add_option("--saucelabs-password", dest="saucelabs_password",
+                      default="guessme")
+    parser.add_option("--public-url", dest="public_url",
+                      default="http://gitbrowser-testing.declarative.co.uk/")
     parser.add_option("--no-clean-home", default=True, const=False,
                       action="store_const", dest="do_clean_home")
     options, args = parser.parse_args(argv)
