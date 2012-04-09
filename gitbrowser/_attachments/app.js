@@ -58,22 +58,22 @@ function hexdump(b64data)
         var hex_part = hex_part.substr(0, hex_part_padding.length);
         var hex_part = (
             hex_part.substr(0, Math.floor(hex_part.length / 2)) + " " 
-		+ hex_part.substr(Math.floor(hex_part.length / 2), 
-				  hex_part.length));
+            + hex_part.substr(Math.floor(hex_part.length / 2), 
+                              hex_part.length));
         var line_id = "00000000" + (i - str_result.length + 1).toString(16);
         var line_id = line_id.substring(line_id.length - 8);
-	if (str_result.length > 0)
-	{
+        if (str_result.length > 0)
+	    {
             result.push(line_id + "  " + hex_part + " |" 
-			+ str_result.join("") + "|\r\n");
-	}
+                        + str_result.join("") + "|\r\n");
+        }
         hex_result.splice(0, hex_result.length);
         str_result.splice(0, str_result.length);
     }
     for (i = 0; i < charcodes.length; i++)
     {
         var code = charcodes[i];
-        hex_result.push(("0" + code.toString(16)).substring(-2, 2));
+        hex_result.push(("0" + code.toString(16)).substr(-2, 2));
         if (code >= 32 && code <= 126)
         {
             str_result.push(String.fromCharCode(code));
