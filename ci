@@ -232,8 +232,9 @@ def main(argv):
 #        subprocess.check_call(env_script + cwd_script + ["nosetests"])
         subprocess.check_call(env_script + cwd_script
                               + ["python", "test_aptconfig.py", "-v"])
-        subprocess.check_call(env_script + cwd_script
-                              + ["python", "test_shellescape.py", "-v"])    	
+        ## Needs python 2.7
+        #subprocess.check_call(env_script + cwd_script
+        #                      + ["python", "test_shellescape.py", "-v"])    	
         couchdb_url = options.couchdb_url
         if options.couchdb_test_url is None:
             couchdb_test_url = posixpath.join(
