@@ -19,11 +19,11 @@ this workspace are:
                        so that it can report on the changes since last
                        build and poll for SCM changes.
 
-   ./couchapp_env
+   ./virtualenv
    
                      - A python virtualenv prefix into which this
                        script will install the couchapp utility and
-                       dependencies.
+                       dependencies.  Also includes the nose testrunner.
 
 If the program detects that it is being run from a git repository (by
 the presence of a ./.git directory) then it assumes that it is running
@@ -192,20 +192,22 @@ def main(argv):
         if mode == "download":
             git_clone(options.git_url, git_path)
         elif mode == "dev":
-            dev_repo = options.dev_repo or find_git_dir()
-            git_clone(dev_repo, git_path)
-            # TODO: Fix the "commit everything in the working copy".  This
-            #       implementation probably ignores untracked files.
-            if len(git_status(dev_repo)) > 0:
-                patch = git_generate_patch(dev_repo)
-                # TODO: Reset to the revision in the dev_repo first
-                git_apply_patch(patch, git_path)
-                git_commit(git_path)
+            if not os.path.exists(git_path):
+                dev_repo = options.dev_repo or find_git_dir()
+                git_clone(dev_repo, git_path)
+                # TODO: Also commit untracked files
+                if len(git_status(dev_repo)) > 0:
+                    print git_status(dev_repo)
+                    patch = git_generate_patch(dev_repo)
+                    print patch
+                    # TODO: Reset to the revision in the dev_repo first
+                    git_apply_patch(patch, git_path)
+                    git_commit(git_path)
         elif mode == "ci":
             pass
         else:
             raise NotImplementedError(mode)
-        virtualenv_path = os.path.join(home_dir, "couchapp_env")
+        virtualenv_path = os.path.join(home_dir, "virtualenv")
         virtualenv_activate = os.path.join(virtualenv_path, "bin", "activate")
         env_script = ["bash", "-c",
                       'source "$1" && shift && exec "$@"', "-",
@@ -215,37 +217,39 @@ def main(argv):
         if not os.path.exists(virtualenv_path):
             subprocess.check_call(["virtualenv", virtualenv_path])
             subprocess.check_call(env_script + ["pip", "install", "couchapp"])
+            subprocess.check_call(env_script + ["pip", "install", "nose"])
         subprocess.check_call(env_script + ["couchapp", "--version"])
-        subprocess.check_call(cwd_script + ["git", "checkout", "master"])
-        subprocess.check_call(cwd_script + ["git", "reset", "--hard", 
-                                            "remotes/origin/master"])
+        #subprocess.check_call(cwd_script + ["git", "checkout", "master"])
+        #subprocess.check_call(cwd_script + ["git", "reset", "--hard", 
+        #                                    "remotes/origin/master"])
         subprocess.check_call(cwd_script + ["git", "log", "-1"])
         subprocess.check_call(cwd_script + ["git", "branch", "-a"])
-        subprocess.check_call(cwd_script + ["python", "aptconfig.py",
-                                            '{"distribution": "lucid"}'])
-        couchdb_url = add_user_to_url(options.couchdb_url,
-                                      options.couchdb_username,
-                                      options.couchdb_password)
-        if options.couchdb_test_url is None:
-            couchdb_test_url = posixpath.join(
-                couchdb_url, "gitbrowser-testing")
-        else:
-            couchdb_test_url = add_user_to_url(options.couchdb_test_url,
-                                               options.couchdb_username,
-                                               options.couchdb_password)
-        subprocess.check_call(
-            env_script
-            + ["bash", "-c", 
-               'export PYTHONPATH="$1:$PYTHONPATH" && shift && exec "$@"', "-",
-               git_path,
-               "python", "-m", "test_gitbrowser"])
-        if options.couchdb_deploy_url is None:
-            couchdb_deploy_url = posixpath.join(couchdb_url, "jwallib")
-        else:
-            couchdb_deploy_url = add_user_to_url(options.couchdb_deploy_url,
-                                                 options.couchdb_username,
-                                                 options.couchdb_password)
+        subprocess.check_call(env_script + cwd_script + ["nosetests"])
+#        subprocess.check_call(cwd_script + ["python", "aptconfig.py",
+#                                            '{"distribution": "lucid"}'])
+#        couchdb_url = add_user_to_url(options.couchdb_url,
+#                                      options.couchdb_username,
+#                                      options.couchdb_password)
+#        if options.couchdb_test_url is None:
+#            couchdb_test_url = posixpath.join(
+#                couchdb_url, "gitbrowser-testing")
+#        else:
+#            couchdb_test_url = add_user_to_url(options.couchdb_test_url,
+#                                               options.couchdb_username,
+#                                               options.couchdb_password)
+#        subprocess.check_call(
+#            env_script
+#            + ["bash", "-c", 
+#               'export PYTHONPATH="$1:$PYTHONPATH" && shift && exec "$@"', "-",
+#               git_path,
+#               "python", "-m", "test_gitbrowser"])
         if options.do_deploy:
+            if options.couchdb_deploy_url is None:
+                couchdb_deploy_url = posixpath.join(couchdb_url, "jwallib")
+            else:
+                couchdb_deploy_url = add_user_to_url(options.couchdb_deploy_url,
+                                                     options.couchdb_username,
+                                                     options.couchdb_password)
             subprocess.check_call(cwd_script + ["python", "gitcouchdbsync.py", 
                                                 couchdb_deploy_url])
             subprocess.check_call(env_script + cwd_script 
