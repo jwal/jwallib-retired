@@ -24,6 +24,10 @@ def get1(items):
     assert len(items) == 1, items
     return items[0]
 
+def read_file(path):
+    with open(path, "rb") as fh:
+        return fh.read().decode("utf-8")
+
 def read_lines(data, line_terminator="\r\n"):
     # For well behaved data that comes from a command line program.
     # Each line - even the last - should really have a \r\n
