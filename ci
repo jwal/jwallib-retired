@@ -114,7 +114,7 @@ def git_status(git_path):
                              cwd=git_path, stdout=subprocess.PIPE)
     stdout, stderr = child.communicate()
     assert child.returncode == 0, git_path
-    return stdout.rstrip("\n").split("\n")
+    return [x for x in stdout.rstrip("\n").split("\n") if x != ""]
 
 def git_generate_patch(git_path):
     child = subprocess.Popen(["git", "diff", "HEAD"],
@@ -257,9 +257,11 @@ def main(argv):
             if options.couchdb_deploy_url is None:
                 couchdb_deploy_url = posixpath.join(couchdb_url, "jwallib")
             else:
-                couchdb_deploy_url = add_user_to_url(options.couchdb_deploy_url,
-                                                     options.couchdb_username,
-                                                     options.couchdb_password)
+                couchdb_deploy_url = options.couchdb_deploy_url,
+                                                     
+            couchdb_deploy_url = add_user_to_url(couchdb_deploy_url,
+                                                 options.couchdb_username,
+                                                 options.couchdb_password)
             subprocess.check_call(cwd_script + ["python", "gitcouchdbsync.py", 
                                                 couchdb_deploy_url])
             subprocess.check_call(env_script + cwd_script 
