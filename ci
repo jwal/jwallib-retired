@@ -47,6 +47,8 @@ from github.
 
 """
 
+from __future__ import with_statement
+
 try:
     from jwalutil import add_user_to_url
 except ImportError:
@@ -63,20 +65,83 @@ import os
 import posixpath
 import subprocess
 import sys
+import contextlib
+import tempfile
+import shutil
 
-def find_git_dir(start_dir="."):
+@contextlib.contextmanager
+def maybe_mkdtemp(candidate):
+    if candidate is None:
+        temp_dir = tempfile.mkdtemp()
+    try:
+        if candidate is None:
+            yield temp_dir
+        else:
+            yield candidate
+    finally:
+        if candidate is None:
+            shutil.rmtree(temp_dir)
+
+def git_clone(git_url, dest_path):
+    if os.path.exists(dest_path):
+        return
+    subprocess.check_call(["git", "clone", git_url, dest_path])
+
+
+def on_error_raise(message):
+    raise Exception(message)
+
+
+def on_error_return_none(message):
+    return None
+
+
+def find_git_dir(start_dir=".", on_missing=on_error_raise):
     start_dir = os.path.abspath(start_dir)
+    candidate = start_dir
     while True:
-        candidate = os.path.join(start_dir, ".git")
-        if os.path.exists(candidate):
+        candidate_git = os.path.join(candidate, ".git")
+        if os.path.exists(candidate_git):
             return candidate
-        if os.path.dirname(start_dir) == start_dir:
-            return None
-        start_dir = os.path.dirname(start_dir)
+        if os.path.dirname(candidate) == candidate:
+            return on_missing("Unable to find a git repository: %s"
+                              % (start_dir,))
+        candidate = os.path.dirname(candidate)
+
+
+def git_status(git_path):
+    child = subprocess.Popen(["git", "status", "--porcelain"],
+                             cwd=git_path, stdout=subprocess.PIPE)
+    stdout, stderr = child.communicate()
+    assert child.returncode == 0, git_path
+    return stdout.rstrip("\n").split("\n")
+
+def git_generate_patch(git_path):
+    child = subprocess.Popen(["git", "diff", "HEAD"],
+                             cwd=git_path, stdout=subprocess.PIPE)
+    stdout, stderr = child.communicate()
+    assert child.returncode == 0, git_path
+    return stdout
+
+def git_apply_patch(patch, git_path):
+    child = subprocess.Popen(["git", "apply", "-"],
+                             cwd=git_path, stdin=subprocess.PIPE)
+    stdout, stderr = child.communicate(patch)
+    assert child.returncode == 0, git_path
+
+def git_commit(git_path, message="Autocommit", username="root",
+               email="fail@example.com"):
+    subprocess.check_call(["git", "-c", "user.name=%s" % (username,),
+                           "-c", "user.email=%s" % (email,),
+                           "commit", "-am", message], cwd=git_path)
 
 def main(argv):
     parser = optparse.OptionParser(__doc__)
-    parser.add_option("--home-dir", dest="home_dir", default=None)
+    parser.add_option("--home-dir", dest="home_dir", default=None,
+                      help=("The workspace used by the script for source code"
+                            "and other dependencies.  Defaults to a temporary "
+                            "directory in dev and download modes.  Defaults "
+                            "to the current directory in ci mode."))
     parser.add_option("--ci-mode", dest="mode", default="auto",
                       action="store_const", const="ci")
     parser.add_option("--dev-mode", dest="mode", default="auto",
@@ -85,6 +150,11 @@ def main(argv):
                       action="store_const", const="auto")
     parser.add_option("--download-mode", dest="mode", default="auto",
                       action="store_const", const="download")
+    parser.add_option("--development-repository", dest="dev_repo",
+                      help=("A git repository, normally a folder on the local "
+                            "machine, to run the code from.  Only used in dev "
+                            "mode.  The repository is cloned and any local "
+                            "changes are committed to the temporary clone."))
     # TODO: Implement the mode switching and temp home dir and dev
     # autodetect and dev autocommit as descrived in the docstring
     parser.add_option("--git-working-copy", dest="git_working_copy_path",
@@ -99,88 +169,90 @@ def main(argv):
                       default="guessme")
     parser.add_option("--couchdb-password", dest="couchdb_password",
                       default="guessme")
+    parser.add_option("--deploy", dest="do_deploy", default=False,
+                      action="store_const", const=True, 
+                      help=("Deploy if the tests pass"))
     options, args = parser.parse_args(argv)
     if len(args) > 0:
         parser.error("Unexpected: %r" % (args,))
-    home_path = os.path.abspath(options.home_dir)
-    container_git_path = os.path.join(home_path, ".git")
     mode = options.mode
     if mode == "auto":
         if "__file__" not in globals().keys():
             mode = "download"
-        elif find_git_dir() is not None:
+        elif find_git_dir(on_missing=on_error_return_none) is not None:
             mode = "dev"
         else:
             mode = "ci"
-    if mode == "download":
-        git_url = options.git_url
-        with mkdtemp() as temp_dir:
-            git_fetch(git_url, temp_dir/"git"/"jwallib")
-            virtualenv_setup(temp_dir/"couchapp_env")
-            run_tests()
-    elif mode == "dev":
-        with mkdtemp() as temp_dir:
-            git_clone(find_git_dir(), temp_dir/"git"/"jwallib")
-            if git_status(find_git_dir()) == "unclean":
-                patch = git_generate_patch(find_git_dir())
-                git_apply_patch(patch, temp_dir/"git"/"jwallib")
-            virtualenv_setup(temp_dir/"couchapp_env")
-            run_tests()
-    elif mode == "ci":
-        if not os.path.exists(home_dir/"couchapp_env"):
-            virtualenv_setup(temp_dir/"couchapp_env")
-        run_tests()
+    if mode == "ci" and options.home_dir is None:
+        home_dir = os.path.abspath(".")
     else:
-        raise NotImplementedError(mode)
-
-
-
- 
-
-    if options.git_dir is None:
-        git_path = os.path.join(home_path, "git", "jwallib")
-    else:
-        git_path = os.path.abspath(options.git_dir)
-    if not os.path.exists(git_path):
-        subprocess.check_call(["git", "clone", options.git_url, git_path])
-    cwd_script = ["bash", "-c", 'cd "$1" && shift && exec "$@"', "-", git_path]
-    subprocess.check_call(cwd_script + ["git", "checkout", "master"])
-    subprocess.check_call(cwd_script + ["git", "reset", "--hard", 
-                                        "remotes/origin/master"])
-    subprocess.check_call(cwd_script + ["git", "log", "-1"])
-    subprocess.check_call(cwd_script + ["git", "branch", "-a"])
-    subprocess.check_call(cwd_script + ["python", "aptconfig.py",
-                                        '{"distribution": "lucid"}'])
-    couchdb_url = add_user_to_url(options.couchdb_url,
-                                  options.couchdb_username,
-                                  options.couchdb_password)
-    if options.couchdb_test_url is None:
-        couchdb_test_url = posixpath.join(couchdb_url, "gitbrowser-testing")
-    else:
-        couchdb_test_url = add_user_to_url(options.couchdb_test_url,
-                                           options.couchdb_username,
-                                           options.couchdb_password)
-    if options.couchdb_deploy_url is None:
-        couchdb_deploy_url = posixpath.join(couchdb_url, "jwallib")
-    else:
-        couchdb_deploy_url = add_user_to_url(options.couchdb_deploy_url,
-                                             options.couchdb_username,
-                                             options.couchdb_password)
-    subprocess.check_call(cwd_script + ["python", "gitcouchdbsync.py", 
-                                        couchdb_deploy_url])
-    virtualenv_path = os.path.join(home_path, "couchapp_env")
-    virtualenv_activate = os.path.join(virtualenv_path, "bin", "activate")
-    env_script = ["bash", "-c",
-                  'source "$1" && shift && exec "$@"', "-",
-                  virtualenv_activate]
-    if not os.path.exists(virtualenv_path):
-        subprocess.check_call(["virtualenv", virtualenv_path])
-        subprocess.check_call(env_script + ["pip", "install", "couchapp"])
-    subprocess.check_call(env_script + ["couchapp", "--version"])
-    subprocess.check_call(env_script + cwd_script 
-                          + ["python", "selfcouchapp.py",
-                             "--app-subdir", "gitbrowser",
-                             couchdb_deploy_url])
+        home_dir = options.home_dir
+    with maybe_mkdtemp(home_dir) as home_dir:
+        git_path = os.path.join(home_dir, "git", "jwallib")
+        if mode == "download":
+            git_clone(options.git_url, git_path)
+        elif mode == "dev":
+            dev_repo = options.dev_repo or find_git_dir()
+            git_clone(dev_repo, git_path)
+            # TODO: Fix the "commit everything in the working copy".  This
+            #       implementation probably ignores untracked files.
+            if len(git_status(dev_repo)) > 0:
+                patch = git_generate_patch(dev_repo)
+                # TODO: Reset to the revision in the dev_repo first
+                git_apply_patch(patch, git_path)
+                git_commit(git_path)
+        elif mode == "ci":
+            pass
+        else:
+            raise NotImplementedError(mode)
+        virtualenv_path = os.path.join(home_dir, "couchapp_env")
+        virtualenv_activate = os.path.join(virtualenv_path, "bin", "activate")
+        env_script = ["bash", "-c",
+                      'source "$1" && shift && exec "$@"', "-",
+                      virtualenv_activate]
+        cwd_script = ["bash", "-c", 'cd "$1" && shift && exec "$@"', "-", 
+                      git_path]
+        if not os.path.exists(virtualenv_path):
+            subprocess.check_call(["virtualenv", virtualenv_path])
+            subprocess.check_call(env_script + ["pip", "install", "couchapp"])
+        subprocess.check_call(env_script + ["couchapp", "--version"])
+        subprocess.check_call(cwd_script + ["git", "checkout", "master"])
+        subprocess.check_call(cwd_script + ["git", "reset", "--hard", 
+                                            "remotes/origin/master"])
+        subprocess.check_call(cwd_script + ["git", "log", "-1"])
+        subprocess.check_call(cwd_script + ["git", "branch", "-a"])
+        subprocess.check_call(cwd_script + ["python", "aptconfig.py",
+                                            '{"distribution": "lucid"}'])
+        couchdb_url = add_user_to_url(options.couchdb_url,
+                                      options.couchdb_username,
+                                      options.couchdb_password)
+        if options.couchdb_test_url is None:
+            couchdb_test_url = posixpath.join(
+                couchdb_url, "gitbrowser-testing")
+        else:
+            couchdb_test_url = add_user_to_url(options.couchdb_test_url,
+                                               options.couchdb_username,
+                                               options.couchdb_password)
+        subprocess.check_call(
+            env_script
+            + ["bash", "-c", 
+               'export PYTHONPATH="$1:$PYTHONPATH" && shift && exec "$@"', "-",
+               git_path,
+               "python", "-m", "test_gitbrowser"])
+        if options.couchdb_deploy_url is None:
+            couchdb_deploy_url = posixpath.join(couchdb_url, "jwallib")
+        else:
+            couchdb_deploy_url = add_user_to_url(options.couchdb_deploy_url,
+                                                 options.couchdb_username,
+                                                 options.couchdb_password)
+        if options.do_deploy:
+            subprocess.check_call(cwd_script + ["python", "gitcouchdbsync.py", 
+                                                couchdb_deploy_url])
+            subprocess.check_call(env_script + cwd_script 
+                                  + ["python", "selfcouchapp.py",
+                                     "--app-subdir", "gitbrowser",
+                                     couchdb_deploy_url])
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))
+

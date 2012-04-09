@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """\
-%prog [options] -- [UNITTEST2_ARGS...]
+%prog [options] -- [UNITTEST_ARGS...]
 """
 
 from __future__ import with_statement
@@ -17,10 +17,10 @@ import posixpath
 import subprocess
 import sys
 import time
-import unittest2
+import unittest
 import urllib
 
-class GitbrowserSeleniumTests(unittest2.TestCase):
+class GitbrowserSeleniumTests(unittest.TestCase):
 
     source_path = NotImplemented
     couchdb_url = NotImplemented
@@ -206,7 +206,7 @@ def main(prog, argv):
     options, args = parser.parse_args(argv)
     unittest_argv = [prog] + args
     with setup_globals(options):
-        unittest2.main(argv=unittest_argv)
+        unittest.main(argv=unittest_argv)
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[0], sys.argv[1:]))
