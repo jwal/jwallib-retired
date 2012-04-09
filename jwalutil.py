@@ -102,3 +102,14 @@ def add_user_to_url(base_url, username, password):
         urllib.quote(username, safe=""),
         urllib.quote(password, safe=""),
         rest)
+
+def group_by(items, key_getter=lambda i: i.id, unique=True):
+    result = {}
+    for item in items:
+        key = key_getter(item)
+        result.setdefault(key, []).append(item)
+    if unique:
+        for key in result:
+            result[key] = get1(result[key])
+    return result
+

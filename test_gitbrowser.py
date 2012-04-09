@@ -6,10 +6,11 @@
 
 from __future__ import with_statement
 
+from pprint import pformat
 from selenium import webdriver
 from couchdblib import delete, couchapp
 from couchdblib import get, put, post_new, put_update, url_quote, temp_view
-from jwalutil import add_user_to_url, mkdtemp, monkey_patch_attr
+from jwalutil import add_user_to_url, mkdtemp, monkey_patch_attr, group_by
 import contextlib
 import datetime
 import optparse
@@ -50,9 +51,9 @@ class GitbrowserSeleniumTests(unittest.TestCase):
                         in driver.find_element_by_xpath('//body').text)
 
     def _go_to_the_selenium_stage(self):
-        desired_capabilities = webdriver.DesiredCapabilities.FIREFOX
-        desired_capabilities["version"] = "6"
-        desired_capabilities["platform"] = "XP"
+        desired_capabilities = webdriver.DesiredCapabilities.CHROME
+        desired_capabilities["version"] = ""
+        desired_capabilities["platform"] = "VISTA"
         desired_capabilities["name"] = "Git Browser selenium tests"
         driver = webdriver.Remote(
             desired_capabilities=desired_capabilities,
@@ -63,6 +64,33 @@ class GitbrowserSeleniumTests(unittest.TestCase):
             self._the_actual_tests(driver)
         finally:
             driver.quit()
+#        drivers = []
+#        for name in dir(webdriver.DesiredCapabilities):
+#            if name.startswith("__"):
+#                continue
+#            drivers.append(getattr(webdriver.DesiredCapabilities, name))
+#        drivers = [d for d in drivers if d["browserName"] != "htmlunit"]
+#        drivers = group_by(drivers, lambda i: i["browserName"])
+#        sauce_browsers = get("http://saucelabs.com/rest/v1/info/browsers")
+#        sauce_browsers = [b for b in sauce_browsers 
+#                          if "[proxy mode]" not in b["long_name"].lower()]
+#        for browser in sauce_browsers:
+#            driver = drivers.get(browser["long_name"].lower())
+#            if driver is None:
+#                continue
+#            desired_capabilities = driver
+#            desired_capabilities["version"] = browser["short_version"]
+#            desired_capabilities["platform"] = browser["os"]
+#            desired_capabilities["name"] = "Git Browser selenium tests"
+#            driver = webdriver.Remote(
+#                desired_capabilities=desired_capabilities,
+#                command_executor=self.saucelabs_url)
+#            try:
+#                driver.implicitly_wait(30)
+#                driver.get(self.public_url)
+#                self._the_actual_tests(driver)
+#            finally:
+#                driver.quit()
 
     def _run_test(self):
         # Wipe out all git-related documents and the design document
