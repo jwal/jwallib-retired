@@ -1,6 +1,7 @@
 from __future__ import with_statement
 
 from jwalutil import StringIO
+from pprint import pformat
 from process import call
 import contextlib
 import json
@@ -137,4 +138,9 @@ def put_update(url, update_func):
 def couchapp(url, local_path):
     url = url.encode("ascii")
     local_path = os.path.abspath(local_path)
-    call(["couchapp", "push", local_path, url])
+    design_json = call(["couchapp", "push", "--export"],
+                        stderr=None, cwd=local_path)
+    # Strangely it seems to print a line before the design document
+    design_json = design_json[design_json.find("{"):]
+    put_update(url, lambda a=None: json.loads(design_json))
+

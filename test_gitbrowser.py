@@ -27,18 +27,14 @@ class GitbrowserSeleniumTests(unittest.TestCase):
 
     def _run_test(self):
         # Wipe out all git-related documents and the design document
-        map_func = """\
-function (doc) {
-  var prefix  = "test-";
-  if (doc._id.substr(0, prefix.length) != prefix) {
-    emit(null, doc._id);
-  }
-}
-"""
-        result = temp_view(posixpath.join(self.couchdb_url, "_temp_view"),
-                           {"map": map_func})
+        result = get(posixpath.join(self.couchdb_url, 
+                                    "_design/test/_view/git-documents"))
         for item in result["rows"]:
             delete(posixpath.join(self.couchdb_url, url_quote(item["id"])))
+        # Upload the gitbrowser to the couchdb design document
+        gitbrowser_source_path = os.path.join(self.source_path, "gitbrowser")
+        couchapp(posixpath.join(self.couchdb_url, "_design/gitbrowser"), 
+                 gitbrowser_source_path)
         # Populate a test GIT repository
         with mkdtemp() as temp_dir:
             cwd_script = ["bash", "-c", 'cd "$1" && shift && exec "$@"', "-", 
@@ -77,10 +73,6 @@ function (doc) {
             sync_script = os.path.join(self.source_path, "gitcouchdbsync.py")
             subprocess.check_call(cwd_script + ["python", sync_script,
                                                 self.couchdb_url])
-        # Upload the gitbrowser to the couchdb design document
-        gitbrowser_source_path = os.path.join(self.source_path, "gitbrowser")
-        couchapp(posixpath.join(self.couchdb_url, "_design/gitbrowser"), 
-                 gitbrowser_source_path)
         # Run selenium testing against the public URL
 
     def test(self):
@@ -89,7 +81,7 @@ function (doc) {
             doc.update({"status": "aborted"})
         queue_url = posixpath.join(self.couchdb_url, "test-queue")
         queued_ids = set(i["_id"] for i in get(queue_url)["queue"])
-        map_func = """\
+        pending_map_func = """\
 function (doc) {
   var prefix = "test-run-";
   if (doc._id.substr(0, prefix.length) == prefix) {
@@ -99,8 +91,29 @@ function (doc) {
   }
 }
 """
-        result = temp_view(posixpath.join(self.couchdb_url, "_temp_view"),
-                           {"map": map_func})
+        git_map_func = """\
+function (doc) {
+  var prefix  = "test-";
+  if (doc._id.substr(0, prefix.length) != prefix) {
+    emit(null, doc._id);
+  }
+}
+"""
+        design_doc = {
+            "language": "javascript",
+            "views": {
+                "pending-tests": {
+                    "map": pending_map_func,
+                    }, 
+                "git-documents": {
+                    "map": git_map_func,
+                    },
+                },
+            }
+        put_update(posixpath.join(self.couchdb_url, "_design/test"),
+                   lambda a=None: design_doc)
+        result = get(posixpath.join(self.couchdb_url, 
+                                    "_design/test/_view/pending-tests"))
         pending_ids = set(i["id"] for i in result["rows"])
         for missing_id in pending_ids - queued_ids:
             put_update(posixpath.join(self.couchdb_url, url_quote(missing_id)),
@@ -165,6 +178,7 @@ function (doc) {
                         put_update(my_url, mark_stopped)
                 else:
         # Set a timout for the next time to check, if necessary
+                    print "sleeping..."
                     time.sleep(5)
         finally:
         # Mark the test as completed
