@@ -30,23 +30,39 @@ class GitbrowserSeleniumTests(unittest.TestCase):
     public_url = NotImplemented
 
     def _the_actual_tests(self, driver):
+
+        def wait_for_load():
+            while True:
+                if "Loading" in driver.find_element_by_xpath('//body').text:
+                    time.sleep(0.1)
+                else:
+                    break
+    
+        wait_for_load()
         self.assertTrue("Just a minimal git repository for testing" 
                         in driver.find_element_by_xpath('//body').text)
         driver.find_element_by_link_text("[up]").click()
+        wait_for_load()
         driver.find_element_by_link_text("README").click()
+        wait_for_load()
         self.assertTrue("Just a minimal git repository for testing" 
                         in driver.find_element_by_xpath('//body').text)        
-        driver.find_element_by_link_text("[up]").click()    
+        driver.find_element_by_link_text("[up]").click()
+        wait_for_load()    
         driver.find_element_by_link_text("binary-file").click()
+        wait_for_load()
         self.assertTrue("00000020  20 21 22 23 24 25 26 27  28 29 2a "
                         "2b 2c 2d 2e 2f  | !\"#$%&'()*+,-./|"
                         in driver.find_element_by_xpath('//body').text)
         self.assertTrue("000000e0  e0 e1 e2 e3 e4 e5 e6 e7  e8 e9 ea "
                         "eb ec ed ee ef  |................|"
                         in driver.find_element_by_xpath('//body').text)
-        driver.find_element_by_link_text("[up]").click()    
+        driver.find_element_by_link_text("[up]").click()
+        wait_for_load()    
         driver.find_element_by_link_text("subfolder").click()
+        wait_for_load()
         driver.find_element_by_link_text("README").click()
+        wait_for_load()
         self.assertTrue("A file in a subfolder"
                         in driver.find_element_by_xpath('//body').text)
 
