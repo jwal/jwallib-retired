@@ -125,6 +125,7 @@ def git_generate_patch(git_path):
     return stdout
 
 def fixup_url(url, config):
+    print "@@@", config
     for candidate in config["urlrewrites"]:
         if url.startswith(candidate["from"]):
             url = candidate["to"] + url[len(candidate["from"]):]
@@ -185,20 +186,20 @@ def main(argv):
         config_path = "file://" + os.path.join(os.path.expanduser("~"),
                                                ".config", "jwallib", 
                                                "config.json")
-        config_json = None
-        if config_path.startswith("{"):
-            config_json = config_path
-        elif config_path.startswith("json:"):
-            config_json = config_path[len("json:"):]
-        elif config_path.startswith("file:"):
-            config_path = config_path[len("file:"):]
-        if config_json is None:
-            if os.path.exists(config_path):
-                with open(config_path, "rb") as fh:
-                    config_json = fh.read()
-            else:
-                config_json = "{}"
-        config.update(json.loads(config_json))
+    config_json = None
+    if config_path.startswith("{"):
+        config_json = config_path
+    elif config_path.startswith("json:"):
+        config_json = config_path[len("json:"):]
+    elif config_path.startswith("file:"):
+        config_path = config_path[len("file:"):]
+    if config_json is None:
+        if os.path.exists(config_path):
+            with open(config_path, "rb") as fh:
+                config_json = fh.read()
+        else:
+            config_json = "{}"
+    config.update(json.loads(config_json))
     mode = options.mode
     if mode == "auto":
         if "__file__" not in globals().keys():
