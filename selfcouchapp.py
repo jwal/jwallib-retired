@@ -103,8 +103,9 @@ def sync_batch(git_couchdb_url, design_couchdb_url, branch, app_subdir):
                         break
                 else:
                     raise Exception("Missing child %r" % (app_subdir,))
-            existing = get(posixpath.join(design_couchdb_url, 
-                                          "_design", url_quote(basename)))
+            doc_url = posixpath.join(design_couchdb_url, 
+                                     "_design", url_quote(basename))
+            existing = get(doc_url)
             if existing.get("couchapp_git_tree_id") == tree:
                 continue
             print "Updating %r..." % (branch,)
@@ -113,9 +114,8 @@ def sync_batch(git_couchdb_url, design_couchdb_url, branch, app_subdir):
                        tree)
             if os.path.exists(os.path.join(local_dir, "_id")):
                 os.unlink(os.path.join(local_dir, "_id"))
-            couchapp(design_couchdb_url, local_dir)
-            print "...done %r" % (branch,)
-            
+            couchapp(doc_url, local_dir)
+            print "...done %r" % (branch,)            
 
 def main(argv):
     parser = optparse.OptionParser(__doc__)

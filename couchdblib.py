@@ -111,8 +111,10 @@ def put_update(url, update_func):
             old_rev = None
         else:
             assert old_doc.get("error") is None, old_doc
-            old_rev = old_doc["_rev"]
-            old_rev = old_doc.pop("_rev")
+            old_rev = old_doc.pop("_rev", None)
+            if old_rev is None:
+                raise Exception("Failed to get existing document "
+                                "_rev from %s:\n%s" % (url, pformat(old_doc)))
         new_doc = update_func(old_doc)
         # The update_func can choose to mutate the document in place
         # or to return a replacement document

@@ -274,12 +274,8 @@ def on_error_raise(message=""):
 @contextlib.contextmanager
 def setup_globals(options):
     source_path = os.path.dirname(os.path.abspath(__file__))
-    couchdb_url = add_user_to_url(options.couchdb_url,
-                                  options.couchdb_username,
-                                  options.couchdb_password)
-    saucelabs_url = add_user_to_url(options.saucelabs_url,
-                                    options.saucelabs_username,
-                                    options.saucelabs_password)
+    couchdb_url = options.couchdb_url
+    saucelabs_url = options.saucelabs_url
     with contextlib.nested(
         monkey_patch_attr(
             GitbrowserSeleniumTests, "source_path", source_path), 
@@ -302,16 +298,8 @@ def main(prog, argv):
                       action="store_const", const=True, default=False)
     parser.add_option("--couchdb-url", dest="couchdb_url",
                       default="http://localhost:5984/gitbrowser-testing")
-    parser.add_option("--couchdb-username", dest="couchdb_username",
-                      default="guessme")
-    parser.add_option("--couchdb-password", dest="couchdb_password",
-                      default="guessme")
     parser.add_option("--saucelabs-url", dest="saucelabs_url",
                       default="http://ondemand.saucelabs.com:80/wd/hub")
-    parser.add_option("--saucelabs-username", dest="saucelabs_username",
-                      default="guessme")
-    parser.add_option("--saucelabs-password", dest="saucelabs_password",
-                      default="guessme")
     parser.add_option("--public-url", dest="public_url",
                       default="http://gitbrowser-testing.declarative.co.uk/")
     parser.add_option("--no-clean-home", default=True, const=False,

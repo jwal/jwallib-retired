@@ -60,6 +60,7 @@ except ImportError:
             urllib.quote(password, safe=""),
             rest)
 
+import json
 import optparse
 import os
 import posixpath
@@ -123,6 +124,12 @@ def git_generate_patch(git_path):
     assert child.returncode == 0, git_path
     return stdout
 
+def fixup_url(url, config):
+    for candidate in config["urlrewrites"]:
+        if url.startswith(candidate["from"]):
+            url = candidate["to"] + url[len(candidate["from"]):]
+    return url
+
 def git_apply_patch(patch, git_path):
     child = subprocess.Popen(["git", "apply", "-"],
                              cwd=git_path, stdin=subprocess.PIPE)
@@ -137,6 +144,9 @@ def git_commit(git_path, message="Autocommit", username="root",
 
 def main(argv):
     parser = optparse.OptionParser(__doc__)
+    parser.add_option("--config", dest="config_path", default=None)
+    parser.add_option("--saucelabs-url", dest="saucelabs_url",
+                      default="http://ondemand.saucelabs.com:80/wd/hub")
     parser.add_option("--home-dir", dest="home_dir", default=None,
                       help=("The workspace used by the script for source code"
                             "and other dependencies.  Defaults to a temporary "
@@ -155,8 +165,6 @@ def main(argv):
                             "machine, to run the code from.  Only used in dev "
                             "mode.  The repository is cloned and any local "
                             "changes are committed to the temporary clone."))
-    # TODO: Implement the mode switching and temp home dir and dev
-    # autodetect and dev autocommit as descrived in the docstring
     parser.add_option("--git-working-copy", dest="git_working_copy_path",
                       default=".")
     parser.add_option("--git-url", dest="git_url",
@@ -165,20 +173,32 @@ def main(argv):
                       default="https://jwal.cloudant.com/")
     parser.add_option("--couchdb-deploy-url", dest="couchdb_deploy_url")
     parser.add_option("--couchdb-test-url", dest="couchdb_test_url")
-    parser.add_option("--couchdb-username", dest="couchdb_username",
-                      default="guessme")
-    parser.add_option("--couchdb-password", dest="couchdb_password",
-                      default="guessme")
-    parser.add_option("--saucelabs-username", dest="saucelabs_username",
-                      default="guessme")
-    parser.add_option("--saucelabs-password", dest="saucelabs_password",
-                      default="guessme")
     parser.add_option("--deploy", dest="do_deploy", default=False,
                       action="store_const", const=True, 
                       help=("Deploy if the tests pass"))
     options, args = parser.parse_args(argv)
     if len(args) > 0:
         parser.error("Unexpected: %r" % (args,))
+    config_path = options.config_path
+    config = {}
+    if config_path is None:
+        config_path = "file://" + os.path.join(os.path.expanduser("~"),
+                                               ".config", "jwallib", 
+                                               "config.json")
+        config_json = None
+        if config_path.startswith("{"):
+            config_json = config_path
+        elif config_path.startswith("json:"):
+            config_json = config_path[len("json:"):]
+        elif config_path.startswith("file:"):
+            config_path = config_path[len("file:"):]
+        if config_json is None:
+            if os.path.exists(config_path):
+                with open(config_path, "rb") as fh:
+                    config_json = fh.read()
+            else:
+                config_json = "{}"
+        config.update(json.loads(config_json))
     mode = options.mode
     if mode == "auto":
         if "__file__" not in globals().keys():
@@ -234,19 +254,17 @@ def main(argv):
                               + ["python", "test_aptconfig.py", "-v"])
         ## Needs python 2.7
         #subprocess.check_call(env_script + cwd_script
-        #                      + ["python", "test_shellescape.py", "-v"])    	
-        couchdb_url = options.couchdb_url
+        #                      + ["python", "test_shellescape.py", "-v"])
+        couchdb_url = fixup_url(options.couchdb_url, config)
         if options.couchdb_test_url is None:
             couchdb_test_url = posixpath.join(
                 couchdb_url, "gitbrowser-testing")
         else:
-            couchdb_test_url = options.couchdb_test_url
+            couchdb_test_url = fixup_url(options.couchdb_test_url, config)
         argv = ["python", "-m", "test_gitbrowser"]
         argv.extend(["--couchdb-url", couchdb_test_url])
-        argv.extend(["--couchdb-username", options.couchdb_username])
-        argv.extend(["--couchdb-password", options.couchdb_password])
-        argv.extend(["--saucelabs-username", options.saucelabs_username])
-        argv.extend(["--saucelabs-password", options.saucelabs_password])
+        argv.extend(["--saucelabs-url", fixup_url(options.saucelabs_url, 
+                                                  config)])
         argv.extend(["--", "--verbose"])
         subprocess.check_call(
             env_script
@@ -257,11 +275,8 @@ def main(argv):
             if options.couchdb_deploy_url is None:
                 couchdb_deploy_url = posixpath.join(couchdb_url, "jwallib")
             else:
-                couchdb_deploy_url = options.couchdb_deploy_url,
-                                                     
-            couchdb_deploy_url = add_user_to_url(couchdb_deploy_url,
-                                                 options.couchdb_username,
-                                                 options.couchdb_password)
+                couchdb_deploy_url = fixup_url(options.couchdb_deploy_url, 
+                                               config)
             subprocess.check_call(cwd_script + ["python", "gitcouchdbsync.py", 
                                                 couchdb_deploy_url])
             subprocess.check_call(env_script + cwd_script 
