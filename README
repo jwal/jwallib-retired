@@ -6,4 +6,15 @@ http://jwallib.declarative.co.uk/
 
 # Copyright 2011-2012 James Ascroft-Leigh
 
-Now built and deployed automatically by Jenkins hosted by cloudbees.com
+Thanks to:
+
+   - Twitter Bootstrap - base HTML/CSS/JS
+
+   - cloudant.com - Free CouchDB hosting in the cloud
+
+   - cloudbees.com - Free Jenkins hosting in the cloud
+
+   - saucelabs.com - Free Selenium hosting in the cloud
+
+   - Python, Apache CouchDB, GNU/Linux
+
