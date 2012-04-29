@@ -125,7 +125,6 @@ def git_generate_patch(git_path):
     return stdout
 
 def fixup_url(url, config):
-    print "@@@", config
     for candidate in config["urlrewrites"]:
         if url.startswith(candidate["from"]):
             url = candidate["to"] + url[len(candidate["from"]):]
