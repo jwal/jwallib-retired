@@ -243,6 +243,7 @@ def main(argv):
             subprocess.check_call(env_script + ["pip", "install", "couchapp"])
             subprocess.check_call(env_script + ["pip", "install", "nose"])
             subprocess.check_call(env_script + ["pip", "install", "selenium"])
+            subprocess.check_call(env_script + ["pip", "install", "pycurl"])
         subprocess.check_call(env_script + ["couchapp", "--version"])
         #subprocess.check_call(cwd_script + ["git", "checkout", "master"])
         #subprocess.check_call(cwd_script + ["git", "reset", "--hard", 

@@ -454,3 +454,39 @@ $.couch.app(function(app) {
     $(window).hashchange(function() {process_hashchange(app)});
     $(window).hashchange();
 });
+
+$(function(){
+
+// Find the base URL for the couchdb database
+    var db_base = "" + window.location;
+    if (db_base.indexOf("#") > -1) {
+	db_base = db_base.substr(0, db_base.indexOf("#"));
+    }
+    if (db_base.substr(db_base.length - 1, db_base.length) != "/") {
+	db_base = db_base + "/";
+    }
+    db_base = db_base + "db/";
+
+    var Branch = Backbone.Model.extend({
+	idAttribute: "_id",
+
+	url: function() {
+	    return db_base + "git-branch-" + this.sha1;
+	},
+    });
+
+    var BranchList = Backbone.Model.extend({
+	idAttribute: "_id",
+	model: Branch,
+	
+	url: function() {
+	    return db_base + "git-branches";
+	},
+	
+	parse: function(json) {
+	    return json.branches;
+	},
+    });
+
+//    var App = new AppView();
+});
