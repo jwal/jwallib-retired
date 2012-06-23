@@ -39,13 +39,13 @@ class GitbrowserSeleniumTests(unittest.TestCase):
                     break
     
         wait_for_load()
-        self.assertTrue("Just a minimal git repository for testing" 
+        self.assertTrue("This is a minimal git repository for testing" 
                         in driver.find_element_by_xpath('//body').text)
         driver.find_element_by_link_text("[up]").click()
         wait_for_load()
         driver.find_element_by_link_text("README").click()
         wait_for_load()
-        self.assertTrue("Just a minimal git repository for testing" 
+        self.assertTrue("This is a minimal git repository for testing" 
                         in driver.find_element_by_xpath('//body').text)        
         driver.find_element_by_link_text("[up]").click()
         wait_for_load()    
@@ -138,7 +138,20 @@ class GitbrowserSeleniumTests(unittest.TestCase):
                                          "Initial commit"])
         ## write file README
             with open(path, "wb") as fh:
-                fh.write("Just a minimal git repository for testing\r\n")
+                fh.write("""\
+# Purpose\r\n\
+\r\n\
+This is a minimal git repository for testing\r\n\
+\r\n\
+# Example Markdown\r\n\
+\r\n\
+Readme files like this are Markdown formatted:\r\n\
+\r\n\
+ * Bullet points\r\n\
+ * Headings\r\n\
+ * Code blocks\r\n\
+ * _etc_\r\n\
+""")
             subprocess.check_call(git + ["add", path])
         ## write file binary 
             path = os.path.join(temp_dir, "binary-file")

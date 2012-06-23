@@ -197,10 +197,17 @@ function show_file_or_folder(branch_name, revision, path)
 	{
 	    if (doc.encoding == "raw")
 	    {
-		var pre = $('<pre></pre>');
-		pre.text(doc.raw);
-		body.append(pre);
-		hljs.highlightBlock(pre[0], null, true);
+		if (path[path.length - 1] == "README") {
+		    var converter = new Showdown.converter();
+		    var div = $('<div>');
+		    div.html(converter.makeHtml(doc.raw));
+		    body.append(div);
+		} else {
+		    var pre = $('<pre></pre>');
+		    pre.text(doc.raw);
+		    body.append(pre);
+		    hljs.highlightBlock(pre[0], null, true);
+		}
 	    }
 	    else if (doc.encoding == "base64")
 	    {
@@ -515,3 +522,4 @@ $(function(){
 	root: base_path
     });
 });
+
