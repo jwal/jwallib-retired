@@ -1,11 +1,5 @@
-var db_base = "" + window.location;
-if (db_base.indexOf("#") > -1) {
-    db_base = db_base.substr(0, db_base.indexOf("#"));
-}
-if (db_base.substr(db_base.length - 1, db_base.length) != "/") {
-    db_base = db_base + "/";
-}
-db_base = db_base + "db/";
+var base_path = "/";
+var db_base = base_path + "db/";
 
 function b64decode(b64data) {
     
@@ -42,6 +36,7 @@ function b64decode(b64data) {
     }
     return output;
 }
+
 function hexdump(b64data)
 {
     var charcodes = b64decode(b64data);
@@ -93,11 +88,13 @@ function hexdump(b64data)
     result.push(line_id);
     return result.join("");
 }
+
 function startswith(string, prefix)
 {
     return (string.length >= prefix.length 
             && string.substring(0, prefix.length) == prefix);
 }
+
 function trim_prefix(string, prefix)
 {
     if (!startswith(string, prefix))
@@ -107,6 +104,7 @@ function trim_prefix(string, prefix)
     }
     return string.substring(prefix.length, string.length);
 }
+
 function group_by(items, key_getter)
 {
     var result = {};
@@ -121,6 +119,7 @@ function group_by(items, key_getter)
     }
     return result;
 }
+
 function get1(items)
 {
     if (items.length == 0)
@@ -133,6 +132,7 @@ function get1(items)
     }
     return items[0];
 }
+
 function split_path(path_string)
 {
     var remainder = path_string;
@@ -162,6 +162,7 @@ function split_path(path_string)
     }
     return decoded_path;
 }
+
 function make_show_url(branch_name, revision, path)
 {
     var result = [];
@@ -172,9 +173,10 @@ function make_show_url(branch_name, revision, path)
     {
 	result.push(encodeURIComponent(path[i]));
     }
-    return "#" + (result.join("/"));
+    return "/" + (result.join("/"));
 }
-function show_file_or_folder(app, branch_name, revision, path)
+
+function show_file_or_folder(branch_name, revision, path)
 {
     if (revision != "head")
     {
@@ -266,18 +268,18 @@ function show_file_or_folder(app, branch_name, revision, path)
 	{
 	    next_remainder.push(remaining_path[i]);
 	}
-	$.get(db_base + $.couch.encodeDocId(child_id), {}, 
+	$.get(db_base + encodeURIComponent(child_id), {}, 
 	      function(d) {return handle_tree_or_blob(d, next_remainder)},
 	      "json");
     }
     function handle_commit(doc)
     {
-	$.get(db_base + $.couch.encodeDocId(doc.tree._id),
+	$.get(db_base + encodeURIComponent(doc.tree._id),
 	      {}, function(d) {return handle_tree_or_blob(d, path)}, "json");
     }
     function handle_branch(doc)
     {
-	$.get(db_base + $.couch.encodeDocId(doc.commit._id),
+	$.get(db_base + encodeURIComponent(doc.commit._id),
 	      {}, handle_commit, "json");
     }
     function handle_branches(doc)
@@ -290,16 +292,17 @@ function show_file_or_folder(app, branch_name, revision, path)
 	    throw new Error("Missing branch: " + branch_name);
 	}
 	var branch = get1(branches);
-	$.get(db_base + $.couch.encodeDocId(branch._id),
+	$.get(db_base + encodeURIComponent(branch._id),
 	      {}, handle_branch, "json");
     }
-    $.get(db_base + $.couch.encodeDocId("git-branches"),
+    $.get(db_base + "git-branches",
 	  {}, handle_branches, "json");
 }
-function process_hashchange(app)
+
+function process_hashchange(path)
 {
     $("#main_body").html("<em>Loading...</em>");
-    if (startswith(location.hash, "#show/"))
+    if (startswith(path, "show/"))
     {
 	var path = split_path(trim_prefix(location.hash, "#show/"));
 	if (path.length == 0)
@@ -323,7 +326,7 @@ function process_hashchange(app)
     else if (startswith(location.hash, "#git-branch-"))
     {
 	var uri = (db_base 
-		   + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
+		   + encodeURIComponent(trim_prefix(location.hash, "#")));
 	$.get(uri, {}, function(doc) {
 	    $("#main_body").html("<h2>Git Branch <span "
 				 + "id=\"branch_name\"></span></h2>"
@@ -336,7 +339,7 @@ function process_hashchange(app)
     else if (startswith(location.hash, "#git-commit-"))
     {
 	var uri = (db_base 
-		   + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
+		   + encodeURIComponent(trim_prefix(location.hash, "#")));
 	$.get(uri, {}, function(doc)
 	      {
 		  $("#main_body").html(
@@ -380,7 +383,7 @@ function process_hashchange(app)
     else if (startswith(location.hash, "#git-tree-"))
     {
 	var uri = (db_base 
-		   + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
+		   + encodeURIComponent(trim_prefix(location.hash, "#")));
 	$.get(uri, {}, function(doc)
 	      {
 		  $("#main_body").html(
@@ -417,7 +420,7 @@ function process_hashchange(app)
     else if (startswith(location.hash, "#git-blob-"))
     {
         var uri = (db_base 
-                   + $.couch.encodeDocId(trim_prefix(location.hash, "#")));
+                   + encodeURIComponent(trim_prefix(location.hash, "#")));
         $.get(uri, {}, function(doc) {
 	    $("#main_body").html("<h2>Git Blob <span "
 				 + "class=\"blob_sha\"></span></h2>"
@@ -444,28 +447,8 @@ function process_hashchange(app)
 		'<a href="javascript: history.go(-1)">back</a>.</em>');
     }   
 }
-// $.couch.app(function(app) {
-//     // $("#account").evently("account", app);
-//     // $.evently.connect("#account","#profile", ["loggedIn","loggedOut"]);
-//     if (location.hash == "" || location.hash == "#")
-//     {
-//         location.replace("#show/master/head/README");
-//     }
-//     $(window).hashchange(function() {process_hashchange(app)});
-//     $(window).hashchange();
-// });
 
 $(function(){
-
-    var db_base = "" + window.location;
-    if (db_base.indexOf("#") > -1) {
-	db_base = db_base.substr(0, db_base.indexOf("#"));
-    }
-    if (db_base.substr(db_base.length - 1, db_base.length) != "/") {
-	db_base = db_base + "/";
-    }
-    db_base = db_base + "db/";
-
     var Branch = Backbone.Model.extend({
 	idAttribute: "_id",
 
@@ -496,6 +479,7 @@ $(function(){
 	routes: {
 	    "": "redirectHome",
 	    "show/:branch/:rev/*path": "show",
+	    "show/:branch/:rev": "showRoot",
 	    "*unknown": "handleUnknown"
 	},
 
@@ -504,7 +488,12 @@ $(function(){
 	},
 
 	show: function(branch, rev, path) {
-	    console.debug("Show", branch, rev, path);
+	    var path = split_path(path);
+	    show_file_or_folder(branch, rev, path);
+	},
+
+	showRoot: function(branch, rev) {
+	    show_file_or_folder(branch, rev, []);
 	},
 
 	handleUnknown: function(unknown) {
@@ -522,6 +511,6 @@ $(function(){
 
     Backbone.history.start({
 	pushState: true, 
-	root: "/"
+	root: base_path
     });
 });
