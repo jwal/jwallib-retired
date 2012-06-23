@@ -444,20 +444,19 @@ function process_hashchange(app)
 		'<a href="javascript: history.go(-1)">back</a>.</em>');
     }   
 }
-$.couch.app(function(app) {
-    // $("#account").evently("account", app);
-    // $.evently.connect("#account","#profile", ["loggedIn","loggedOut"]);
-    if (location.hash == "" || location.hash == "#")
-    {
-        location.replace("#show/master/head/README");
-    }
-    $(window).hashchange(function() {process_hashchange(app)});
-    $(window).hashchange();
-});
+// $.couch.app(function(app) {
+//     // $("#account").evently("account", app);
+//     // $.evently.connect("#account","#profile", ["loggedIn","loggedOut"]);
+//     if (location.hash == "" || location.hash == "#")
+//     {
+//         location.replace("#show/master/head/README");
+//     }
+//     $(window).hashchange(function() {process_hashchange(app)});
+//     $(window).hashchange();
+// });
 
 $(function(){
 
-// Find the base URL for the couchdb database
     var db_base = "" + window.location;
     if (db_base.indexOf("#") > -1) {
 	db_base = db_base.substr(0, db_base.indexOf("#"));
@@ -488,5 +487,41 @@ $(function(){
 	},
     });
 
-//    var App = new AppView();
+    var AppView = Backbone.View.extend({
+	el: $(".main_body"),
+    });
+
+    var Router = Backbone.Router.extend({
+
+	routes: {
+	    "": "redirectHome",
+	    "show/:branch/:rev/*path": "show",
+	    "*unknown": "handleUnknown"
+	},
+
+	redirectHome: function() {
+	    window.location.replace("/show/master/head/README");
+	},
+
+	show: function(branch, rev, path) {
+	    console.debug("Show", branch, rev, path);
+	},
+
+	handleUnknown: function(unknown) {
+	    $(".main_body").html('<h1>Not found</h1><p>The location '
+				 + '<span class="unknown_url" '
+				 + 'style="font-style: italic;">'
+				 + '</span> is not recognized.');
+	    $(".unknown_url").text(unknown);
+	    throw new Error("Unknown page:", unknown);
+	}
+    });
+
+    var my_router = new Router();
+    var my_app = new AppView();
+
+    Backbone.history.start({
+	pushState: true, 
+	root: "/"
+    });
 });

@@ -157,7 +157,7 @@ class GitbrowserSeleniumTests(unittest.TestCase):
             subprocess.check_call(cwd_script + ["python", sync_script,
                                                 self.couchdb_url])
         # Run selenium testing against the public URL
-        print "Uploaded. Runnint tests..."
+        print "Uploaded. Running tests..."
         self._go_to_the_selenium_stage()
 
     def test(self):

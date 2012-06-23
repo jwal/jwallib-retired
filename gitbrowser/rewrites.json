@@ -1,5 +1,6 @@
 [
+	{"from": "/show/*", "to": "/index.html"},
 	{"from": "/", "to": "/index.html"},
 	{"from": "/db/*", "to": "../../*"},
-	{"from": "/*", "to": "/*"}
+	{"from": "/static/*", "to": "/*"}
 ]
