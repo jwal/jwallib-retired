@@ -200,6 +200,7 @@ function show_file_or_folder(branch_name, revision, path)
 		var pre = $('<pre></pre>');
 		pre.text(doc.raw);
 		body.append(pre);
+		hljs.highlightBlock(pre[0], null, true);
 	    }
 	    else if (doc.encoding == "base64")
 	    {

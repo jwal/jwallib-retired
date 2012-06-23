@@ -145,6 +145,24 @@ class GitbrowserSeleniumTests(unittest.TestCase):
             with open(path, "wb") as fh:
                 fh.write("".join(chr(i) for i in range(2**8)))
             subprocess.check_call(git + ["add", path])
+        ## write python file 
+            path = os.path.join(temp_dir, "example.py")
+            with open(path, "wb") as fh:
+                fh.write("""\
+# This is an example python file\r\n\
+from __future__ import division\r\n\
+import os, sys, unittest\r\n\
+\r\n\
+class SomeTest(unittest.TestCase):\r\n\
+\r\n\
+  def testSomething(self):\r\n\
+    '''Just an example test'''\r\n\
+    self.fail("Just an example")\r\n\
+\r\n\
+if __name__ == "__main__":\r\n\
+  unittest.main()\r\n\
+""")
+            subprocess.check_call(git + ["add", path])
         ## write file subfolder/README 
             path = os.path.join(temp_dir, "subfolder", "README")
             os.makedirs(os.path.dirname(path))
