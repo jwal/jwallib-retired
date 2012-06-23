@@ -1,10 +1,14 @@
-A set of utility functions found useful by James Ascroft-Leigh.
-Includes some git-to-couchdb utilities just for fun.
+# Personal repository for James Ascroft-Leigh
 
-Also try it here:
-http://jwallib.declarative.co.uk/
+This repository has some snippets of code that I have found useful in
+the past.  As you can see from the commit history, my propensity to
+commit code here isn't constant over time.
 
-# Copyright 2011-2012 James Ascroft-Leigh
+# Git Browser
+
+Lately I have been experimenting with Apache CouchDB.  My experimental
+application to explore this platform is a Git source code repository
+browser.
 
 Thanks to:
 
@@ -17,4 +21,11 @@ Thanks to:
    - saucelabs.com - Free Selenium hosting in the cloud
 
    - Python, Apache CouchDB, GNU/Linux
+
+# Copyright
+
+All code in this repository is Copyright 2011-2012 James Ascroft-Leigh
+except for code that has been copied here from other repositories.  I
+have tried to make it clear what code is imported and where it came
+from and I have tried to stick to liberally licenced code.
 
