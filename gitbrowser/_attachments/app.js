@@ -95,6 +95,13 @@ function startswith(string, prefix)
             && string.substring(0, prefix.length) == prefix);
 }
 
+function endswith(string, suffix)
+{
+    return (string.length >= suffix.length 
+            && string.substring(string.length - suffix.length, 
+				string.length) == suffix);
+}
+
 function trim_prefix(string, prefix)
 {
     if (!startswith(string, prefix))
@@ -119,6 +126,13 @@ function group_by(items, key_getter)
     }
     return result;
 }
+
+//# Arrays with a single entry
+// This is a function I like to use frequently.  If you have an array of items,
+// such as matches to a CSS selector or results of an SQL query, but you 
+// expect there to always be a single result then this function is used to 
+// unbox it from the array.  If you failed to find the item you expect, or you
+// found an ambiguous result, then it fails early.
 
 function get1(items)
 {
@@ -197,16 +211,88 @@ function show_file_or_folder(branch_name, revision, path)
 	{
 	    if (doc.encoding == "raw")
 	    {
+		var heading = $('<h1></h1>');
+		heading.text(path[path.length - 1]);
+		var converter = new Showdown.converter();
 		if (path[path.length - 1] == "README") {
-		    var converter = new Showdown.converter();
 		    var div = $('<div>');
 		    div.html(converter.makeHtml(doc.raw));
 		    body.append(div);
 		} else {
-		    var pre = $('<pre></pre>');
+		    body.append(heading);
+		    var table = $('<table>'
+				  + '<col class="docs_column"></col>'
+				  + '<col class="code_column"></col>'
+				  + '</table>');
+		    var pre = $('<pre style="display: none"></pre>');
+		    if (endswith(path[path.length - 1], ".py")) {
+			pre.addClass("python");
+		    }
 		    pre.text(doc.raw);
 		    body.append(pre);
 		    hljs.highlightBlock(pre[0], null, true);
+		    var language = pre.attr("class");
+		    var peek = function(container) {
+			var child_nodes = container.childNodes;
+			return (child_nodes.length >= 2
+				&& child_nodes[0].nodeType 
+                                   == child_nodes[0].ELEMENT_NODE
+				&& child_nodes[0].nodeName == "SPAN"
+				&& $(child_nodes[0]).hasClass("comment")
+				&& child_nodes[1].nodeType
+                                   == child_nodes[1].TEXT_NODE
+				&& startswith(child_nodes[1].data, "\n"));
+		    };
+		    while (pre[0].childNodes.length > 0) {
+			var row = $('<tr></tr>');
+			table.append(row);
+			var docs_cell = $('<td class="docs_column_cell"></td>');
+			var docs_pre = $('<pre></pre>');
+			docs_cell.append(docs_pre);
+			row.append(docs_cell);
+			var code_cell = $('<td class="code_column_cell"></td>');
+			var code_pre = $('<pre></pre>');
+			row.append(code_cell);
+			code_cell.append(code_pre);
+			var child_nodes = pre[0].childNodes;
+			while (peek(pre[0])) {
+			    var comment = pre[0].childNodes[0];
+			    var newline = pre[0].childNodes[1];
+			    if (newline.data == "\n") {
+				pre[0].removeChild(newline);
+				docs_pre.append($(newline));
+			    } else {
+				newline.data = trim_prefix(newline.data, "\n");
+				var unused = $('<div></div>');
+				unused.text("\n");
+				var new_node = unused[0].childNodes[0];
+				unused[0].removeChild(new_node);
+				docs_pre.append($(new_node));
+			    }
+			    pre[0].removeChild(comment);
+			    docs_pre.append($(comment));
+			}
+			if (docs_pre[0].childNodes.length > 0
+			    && pre[0].childNodes.length > 0 
+			    && pre[0].childNodes[0].nodeType
+			       == pre[0].childNodes[0].TEXT_NODE
+			    && startswith(pre[0].childNodes[0].data, "\n")) {
+			    continue;
+			}
+			while (pre[0].childNodes.length > 0 && !peek(pre[0])) {
+			    var to_move = pre[0].childNodes[0];
+			    pre[0].removeChild(to_move);
+			    code_pre.append($(to_move));
+			}
+		    }
+		    _.each($(".docs_column_cell", table), function(i) {
+			var raw_code = $(i).text();
+			if (language == "python") {
+			    raw_code = raw_code.replace(/^#/gm, "");
+			}
+			$(i).html(converter.makeHtml(raw_code));
+		    });
+                    body.append(table);
 		}
 	    }
 	    else if (doc.encoding == "base64")

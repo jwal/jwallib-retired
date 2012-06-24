@@ -162,7 +162,16 @@ Readme files like this are Markdown formatted:\r\n\
             path = os.path.join(temp_dir, "example.py")
             with open(path, "wb") as fh:
                 fh.write("""\
-# This is an example python file\r\n\
+## Example\r\n\
+#This is an example python file\r\n\
+#\r\n\
+#  - Example bullet list\r\n\
+#  - _etc_\r\n\
+#\r\n\
+#Because of the blank line, this documentation block should not\r\n\
+#have any code on the right and the following code block should not\r\n\
+#have any documentation to its left.\r\n\
+\r\n\
 from __future__ import division\r\n\
 import os, sys, unittest\r\n\
 \r\n\
@@ -172,6 +181,9 @@ class SomeTest(unittest.TestCase):\r\n\
     '''Just an example test'''\r\n\
     self.fail("Just an example")\r\n\
 \r\n\
+## Main entry point\r\n\
+#Some normal *Markdown* paragraph text, the example \r\n\
+#heading should line up with the if statement.\r\n\
 if __name__ == "__main__":\r\n\
   unittest.main()\r\n\
 """)

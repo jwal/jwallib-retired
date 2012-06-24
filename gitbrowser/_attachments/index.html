@@ -32,6 +32,24 @@
       body {
         padding-top: 60px; /* 60px to make the container 
                               go all the way to the bottom of the topbar */
+        overflow-y: scroll;
+      }
+      .code_column_cell, .docs_column_cell {
+        vertical-align: top;
+      }
+      .code_column {
+        width: 70%;
+        border: 1px solid grey;
+        border-radius: 0.5em;
+        background: #fdf6e3;
+      }
+      .docs_column {
+        width: 30%;
+      }
+      .code_column_cell pre {
+        border-radius: 0;
+        border: 0;
+        background: transparent;
       }
     </style>
   </head>
