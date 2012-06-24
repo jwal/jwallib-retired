@@ -8,7 +8,8 @@ commit code here isn't constant over time.
 
 Lately I have been experimenting with Apache CouchDB.  My experimental
 application to explore this platform is a Git source code repository
-browser.
+browser.  Try it at
+[http://jwallib.declarative.co.uk](http://jwallib.declarative.co.uk).
 
 Thanks to:
 
