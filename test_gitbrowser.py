@@ -185,6 +185,8 @@ class SomeTest(unittest.TestCase):\r\n\
 #Some normal *Markdown* paragraph text, the example \r\n\
 #heading should line up with the if statement.\r\n\
 if __name__ == "__main__":\r\n\
+  # This comment, starting after column 0, is a normal comment shown\r\n\
+  # inline with the code instead of one that is shown in the left panel.\r\n\
   unittest.main()\r\n\
 """)
             subprocess.check_call(git + ["add", path])

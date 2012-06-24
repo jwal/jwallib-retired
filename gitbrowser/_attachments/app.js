@@ -232,7 +232,7 @@ function show_file_or_folder(branch_name, revision, path)
 		    body.append(pre);
 		    hljs.highlightBlock(pre[0], null, true);
 		    var language = pre.attr("class");
-		    var peek = function(container) {
+		    var peek = function(container, offset) {
 			var child_nodes = container.childNodes;
 			return (child_nodes.length >= 2
 				&& child_nodes[0].nodeType 
@@ -280,9 +280,16 @@ function show_file_or_folder(branch_name, revision, path)
 			    continue;
 			}
 			while (pre[0].childNodes.length > 0 && !peek(pre[0])) {
-			    var to_move = pre[0].childNodes[0];
-			    pre[0].removeChild(to_move);
-			    code_pre.append($(to_move));
+			    while (pre[0].childNodes.length > 0) {
+				var to_move = pre[0].childNodes[0];
+				pre[0].removeChild(to_move);
+				code_pre.append($(to_move));
+				if (to_move.nodeType == to_move.TEXT_NODE
+				    && endswith(to_move.data, "\n") 
+				    && peek(pre[0])) {
+				    break;
+				}
+			    }
 			}
 		    }
 		    _.each($(".docs_column_cell", table), function(i) {
