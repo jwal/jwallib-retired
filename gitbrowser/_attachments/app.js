@@ -220,7 +220,7 @@ function show_file_or_folder(branch_name, revision, path)
 		    body.append(div);
 		} else {
 		    body.append(heading);
-		    var table = $('<table>'
+		    var table = $('<table class="docco_table">'
 				  + '<col class="docs_column"></col>'
 				  + '<col class="code_column"></col>'
 				  + '</table>');
