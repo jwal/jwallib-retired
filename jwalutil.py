@@ -113,3 +113,12 @@ def group_by(items, key_getter=lambda i: i.id, unique=True):
             result[key] = get1(result[key])
     return result
 
+
+def on_error_raise(message):
+    raise Exception(message)
+
+
+def on_error_return_none(message):
+    return None
+
+

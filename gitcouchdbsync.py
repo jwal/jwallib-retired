@@ -64,7 +64,8 @@ def git_show(git, sha, attr):
                           "--format=format:%s%s%s" % (start, attr, end),
                           "--quiet", sha], do_check=False)
         sindex = out.index(start) + len(start)
-        eindex = out.rindex(end)
+        # TODO: Shouldn't need these magic markers
+        eindex = out.index(end)
         assert sindex <= eindex, out
         return out[sindex:eindex]
     except Exception:
@@ -74,9 +75,6 @@ def resolve_document_using_git(git, docref):
     document = docref_to_dict(docref)
     kind = docref.kind
     id = docref.id
-    get = lambda f, n=docref.name: call(
-        git + ["show", "--quiet", "--format=format:%s" % (f,), n],
-        do_check=False)
     get = lambda a: git_show(git, docref.name, a)
     if kind == "branches":
         branches = set()
