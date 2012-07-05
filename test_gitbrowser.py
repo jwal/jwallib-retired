@@ -210,7 +210,6 @@ if __name__ == "__main__":\r\n\
         def mark_aborted(doc):
             doc.update({"status": "aborted"})
         queue_url = posixpath.join(self.couchdb_url, "test-queue")
-        print "@@@", queue_url
         queued_ids = set(i["_id"] for i in get(queue_url)["queue"])
         pending_map_func = """\
 function (doc) {

@@ -99,7 +99,7 @@ except:
         return None
 
 try:
-    from jwalutil imprt on_error_raise
+    from jwalutil import on_error_raise
 except:
     def on_error_raise(message):
         raise Exception(message)
@@ -150,7 +150,7 @@ def fixup_url(url, config):
     return url
 
 try:
-    from gitdevcommit import git_apply_patch:
+    from gitdevcommit import git_apply_patch
 except:
     def git_apply_patch(patch, git_path):
         child = subprocess.Popen(["git", "apply", "-"],
@@ -170,22 +170,22 @@ except:
 try:
     from gitdevcommit import git_dev_commit
 except:
-def git_dev_commit(dev_repo, dest_repo):
-    if dest_repo.startswith(dev_repo):
-        raise Exception("Dev repo %r within dest repo %r"
-                        % (dev_repo, dest_repo))
-    if dev_repo.startswith(dest_repo):
-        raise Exception("Dest repo %r within dev repo %r"
-                        % (dest_repo, dev_repo))
-    git_clone(dev_repo, git_path)
-    # TODO: Also commit untracked files?
-    if len(git_status(dev_repo)) > 0:
-        print git_status(dev_repo)
-        patch = git_generate_patch(dev_repo)
-        print patch
-        # TODO: Reset to the revision in the dev_repo first
-        git_apply_patch(patch, git_path)
-        git_commit(git_path)
+    def git_dev_commit(dev_repo, dest_repo):
+        if dest_repo.startswith(dev_repo):
+            raise Exception("Dev repo %r within dest repo %r"
+                            % (dev_repo, dest_repo))
+        if dev_repo.startswith(dest_repo):
+            raise Exception("Dest repo %r within dev repo %r"
+                            % (dest_repo, dev_repo))
+        git_clone(dev_repo, git_path)
+        # TODO: Also commit untracked files?
+        if len(git_status(dev_repo)) > 0:
+            print git_status(dev_repo)
+            patch = git_generate_patch(dev_repo)
+            print patch
+            # TODO: Reset to the revision in the dev_repo first
+            git_apply_patch(patch, git_path)
+            git_commit(git_path)
 
 
 def main(argv):
