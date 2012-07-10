@@ -215,7 +215,7 @@ def on_error_raise(message):
     raise Exception(message)
 
 
-#### On error, raise
+#### On error, return None
  
 # Sometimes the failure mode is known to be safe to ignore by the
 # caller.  Such callers may wish to pass this function to override
