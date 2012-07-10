@@ -1,4 +1,9 @@
-# Copyright 2012 James Ascroft-Leigh
+# A simple utility that clones a git repository but also commits any
+# uncommitted changes from the original into the clone.  This is used
+# for development of the Git Browser where it is useful to see how the
+# browser will display certain content before committing it to the
+# main repository.  It is also used, as a library, from the continuous
+# integration script to that tests can be run before commit.
 
 """\
 %prog [options]
@@ -10,7 +15,13 @@ import os
 import subprocess
 import sys
 
-
+### Finding the git directory
+#
+# Simulates the way the actual git command locates the root directory
+# of the repository.  It searches for the .git folder in the current
+# directory and moves up one level if it is not there.  This is
+# repeated until it find the repository root or until it fails by
+# finding the filesystem root.
 def find_git_dir(start_dir=".", on_missing=on_error_raise):
     start_dir = os.path.abspath(start_dir)
     candidate = start_dir
@@ -92,3 +103,5 @@ def main(argv):
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))
+
+# Copyright 2012 James Ascroft-Leigh

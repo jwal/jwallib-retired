@@ -1,3 +1,7 @@
+# Simplle utility functions for interacting with a CouchDB database.
+# The pycurl library is used for simple network (HTTP/S) protocol
+# handling.
+
 from __future__ import with_statement
 
 from jwalutil import StringIO
@@ -11,9 +15,17 @@ import pycurl as curl
 import urllib
 import uuid
 
+### URL quoting
+# The default safe characters in the standard library's
+# `urllib.quote()` function is not safe for all uses.  This function
+# is more like JavaScript's `encodeURIComponent()`.
 def url_quote(part):
     return urllib.quote(part, safe="")
 
+### Simple document fetching
+# 
+# Allows normal size documents to be fetched using a single line
+# function call.  Assumes that the return document is JSON.
 def get(url):
     url = url.encode("ascii")
     with contextlib.closing(curl.Curl()) as c:
@@ -23,6 +35,10 @@ def get(url):
         c.perform()
         return json.loads(out.getvalue())
 
+### Simple document uploading
+# 
+# Allows a JSON-like object to be uploaded to a particular document
+# URL in the CouchDB.
 def put(url, document):
     url = url.encode("ascii")
     with contextlib.closing(curl.Curl()) as c:
@@ -34,18 +50,12 @@ def put(url, document):
         c.perform()
         return json.loads(out.getvalue())
 
-def temp_view(url, view):
-    url = url.encode("ascii")
-    with contextlib.closing(curl.Curl()) as c:
-        c.setopt(c.URL, url)
-        out = StringIO()
-        c.setopt(c.WRITEFUNCTION, out.write)
-        c.setopt(c.POST, True)
-        c.setopt(c.HTTPHEADER, ["Content-Type: application/json"])
-        c.setopt(c.POSTFIELDS, json.dumps(view))
-        c.perform()
-        return json.loads(out.getvalue())
-
+### Delete a document
+#
+# To delete a document the HTTP DELETE method is used.  A delete of a
+# specifif revision can be specified in which case the document will
+# only be deleted when that revision is the latest version.  The
+# default is to delete the latest revision.
 def delete(url, rev=None):
     url = url.encode("ascii")
     if rev is None:
@@ -61,10 +71,12 @@ def delete(url, rev=None):
         if not result.get("ok", False):
             raise Exception(result)
 
+### Posting a new document
+# 
+# The couchdb documentation suggests that the POST HTTP method should
+# be avoided so this function emulates it by allocating a UUID and
+# trying to PUT to it until it finds one that isn't already used.
 def post_new(url, document, id_template="%s"):
-    # The couchdb documentation suggests that POST should be avoided,
-    # so emulate it by allocating a UUID and trying to PUT to it until
-    # it finds one that isn't already used.
     i = 0
     while True:
         if i % 1000 == 0 and i != 0:
@@ -86,19 +98,25 @@ def post_new(url, document, id_template="%s"):
                 raise Exception(result)
         i += 1
     
-
+### Updating a document
+#
+# CouchDB documents can be updated using the PUT method but the API
+# returns an error (unless overridden) for changes that are made
+# concurrently i.e. without referencing the current version of the
+# document in their PUT.  This helper function allows an update_func
+# function to repeatedly attempt to apply changes to a document until
+# those changes can be succesfully committed to the database.  The
+# func will be called each time a conflict is detected, each time with
+# a different version of the document as input.
+# 
+# A simple example for the update_func can be to just return a new
+# replacement document.  In this case the function is effectvely a
+# forced replacement of the named document.
+# 
+# Ideally this function would use a randomized binary exponential
+# backoff for PUT attempts but at the moment it just tries as quickly
+# as it can.
 def put_update(url, update_func):
-    # Couchdb documents can be updated but the API returns an error
-    # (unless overridden) for changes that are made concurrently
-    # i.e. without referencing the current version of the document in
-    # their PUT.  This helper function allows an update_func function
-    # to repeatedly attempt to apply changes to a document until those
-    # changes can be succesfully committed to the database.  The func
-    # will be called each time a conflict is detected, each time with
-    # a different version of the document as input.  Ideally this
-    # function would use a randomized binary exponential backoff for
-    # PUT attempts but at the moment it just tries as quickly as it
-    # can.
     url = url.encode("ascii")
     i = 0
     while True:
@@ -137,6 +155,11 @@ def put_update(url, update_func):
             return new_doc
         i += 1
 
+### Uploading a CouchApp
+# 
+# Calls through to the command line program `couchapp` to generate a
+# CouchDB design document from a directory structure.  The design
+# document is uploaded to the given URL.
 def couchapp(url, local_path):
     url = url.encode("ascii")
     local_path = os.path.abspath(local_path)

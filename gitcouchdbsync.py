@@ -30,9 +30,9 @@ incremental copies.
 # retaining the bottom most element you will eventually get everything
 # pulled.
 # 
-# assert MAX_PULL_STACK_LENGTH > 10, MAX_PULL_STACK_LENGTH
-# if len(pull_stack) > MAX_PULL_STACK_LENGTH:
-#     pull_stack[:] = [pull_stack[0]] + [pull_stack[-1]]
+#     assert MAX_PULL_STACK_LENGTH > 10, MAX_PULL_STACK_LENGTH
+#     if len(pull_stack) > MAX_PULL_STACK_LENGTH:
+#         pull_stack[:] = [pull_stack[0]] + [pull_stack[-1]]
 
 from __future__ import with_statement
 
@@ -276,28 +276,12 @@ def fetch_all(resolve_document, couchdb_url, seeds):
                 print "ouch, lots of seeds?"
             assert len(to_fetch) > 0
 
-def force_couchdb_put_all_or_nothing(couchdb_url, *documents):
-    document = {"all_or_nothing": True, "docs": documents}
-    with contextlib.closing(curl.Curl()) as c:
-        c.setopt(c.URL, couchdb_url + "/_bulk_docs")
-        out = StringIO()
-        input = json.dumps(document)
-        c.setopt(c.WRITEFUNCTION, out.write)
-        c.setopt(c.POST, True)
-        c.setopt(c.POSTFIELDS, input)
-        c.setopt(c.HTTPHEADER, ["content-type: application/json"])
-        c.perform()
-        result = json.loads(out.getvalue())
-        assert all(a.get("error") is None for a in result), result
-
-def force_couchdb_put_with_rev(couchdb_url, *documents):
+def force_couchdb_put(couchdb_url, *documents):
     for document in documents:
         put_update(posixpath.join(couchdb_url, document["_id"]),
                    lambda _: document)
 
-force_couchdb_put = force_couchdb_put_with_rev
-
-def git_to_couchdb_using_git(cache_root, git_url, couchdb_url):
+def git_to_couchdb(cache_root, git_url, couchdb_url):
     if git_url is None:
         git = ["git"]
     else:
@@ -312,8 +296,6 @@ def git_to_couchdb_using_git(cache_root, git_url, couchdb_url):
         call(git + ["fetch", "origin"], stdout=None, stderr=None)
     resolve_document = lambda d: resolve_document_using_git(git, d)
     fetch_all(resolve_document, couchdb_url, [BRANCHES_DOCREF])
-
-git_to_couchdb = git_to_couchdb_using_git
 
 def main(argv):
     parser = optparse.OptionParser(__doc__)

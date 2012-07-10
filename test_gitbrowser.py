@@ -9,7 +9,7 @@ from __future__ import with_statement
 from pprint import pformat
 from selenium import webdriver
 from couchdblib import delete, couchapp
-from couchdblib import get, put, post_new, put_update, url_quote, temp_view
+from couchdblib import get, put, post_new, put_update, url_quote
 from jwalutil import add_user_to_url, mkdtemp, monkey_patch_attr, group_by
 import contextlib
 import datetime

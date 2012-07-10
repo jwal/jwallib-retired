@@ -1,6 +1,4 @@
-
 import pipes
-
 
 def shell_escape_arg(arg):
     return pipes.quote(arg)
