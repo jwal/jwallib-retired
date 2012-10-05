@@ -236,94 +236,100 @@ function show_file_or_folder(branch_name, revision, path)
 		    throw new Error(doc.encoding);
 		}
 		var heading = $('<h1></h1>');
-		heading.text(path[path.length - 1]);
+		heading.text(doc.basename);
 		var converter = new Showdown.converter();
 		body.append(heading);
-		var table = $('<table class="docco_table">'
-			      + '<col class="docs_column"></col>'
-			      + '<col class="code_column"></col>'
-			      + '</table>');
-		var pre = $('<pre style="display: none"></pre>');
-		var line_func = function(l) {return l};
-		for (var i in HIGHLIGHT_MIME_TYPES) {
-		    if (doc.mime_type == i) {
-			pre.addClass(HIGHLIGHT_MIME_TYPES[i].name);
-			line_func = HIGHLIGHT_MIME_TYPES[i].line_func;
-			break;
-		    }
-		}
-		pre.text(text);
-		body.append(pre);
-		hljs.highlightBlock(pre[0], null, true);
-		var language = pre.attr("class");
-		var peek = function(container, offset) {
-		    var child_nodes = container.childNodes;
-		    return (child_nodes.length >= 2
-			    && child_nodes[0].nodeType 
-                            == child_nodes[0].ELEMENT_NODE
-			    && child_nodes[0].nodeName == "SPAN"
-			    && $(child_nodes[0]).hasClass("comment")
-			    && child_nodes[1].nodeType
-                            == child_nodes[1].TEXT_NODE
-			    && startswith(child_nodes[1].data, "\n"));
-		};
-		while (pre[0].childNodes.length > 0) {
-		    var row = $('<tr></tr>');
-		    table.append(row);
-		    var docs_cell = $(
-			'<td class="docs_column_cell"></td>');
-		    var docs_pre = $('<pre></pre>');
-		    docs_cell.append(docs_pre);
-		    row.append(docs_cell);
-		    var code_cell = $(
-			'<td class="code_column_cell"></td>');
-		    var code_pre = $('<pre></pre>');
-		    row.append(code_cell);
-		    code_cell.append(code_pre);
-		    var child_nodes = pre[0].childNodes;
-		    while (peek(pre[0])) {
-			var comment = pre[0].childNodes[0];
-			var newline = pre[0].childNodes[1];
-			if (newline.data == "\n") {
-			    pre[0].removeChild(newline);
-			    docs_pre.append($(newline));
-			} else {
-			    newline.data = trim_prefix(newline.data, "\n");
-			    var unused = $('<div></div>');
-			    unused.text("\n");
-			    var new_node = unused[0].childNodes[0];
-			    unused[0].removeChild(new_node);
-			    docs_pre.append($(new_node));
+		if (doc.mime_type == "text/plain") {
+		    var div = $('<div class="docs_column">');
+		    div.html(converter.makeHtml(text));
+		    body.append(div);
+		} else {
+		    var table = $('<table class="docco_table">'
+				  + '<col class="docs_column"></col>'
+				  + '<col class="code_column"></col>'
+				  + '</table>');
+		    var pre = $('<pre style="display: none"></pre>');
+		    var line_func = function(l) {return l};
+		    for (var i in HIGHLIGHT_MIME_TYPES) {
+			if (doc.mime_type == i) {
+			    pre.addClass(HIGHLIGHT_MIME_TYPES[i].name);
+			    line_func = HIGHLIGHT_MIME_TYPES[i].line_func;
+			    break;
 			}
-			pre[0].removeChild(comment);
-			docs_pre.append($(comment));
 		    }
-		    if (docs_pre[0].childNodes.length > 0
-			&& pre[0].childNodes.length > 0 
-			&& pre[0].childNodes[0].nodeType
-			== pre[0].childNodes[0].TEXT_NODE
-			&& startswith(pre[0].childNodes[0].data, "\n")) {
-			continue;
-		    }
-		    while (pre[0].childNodes.length > 0 && !peek(pre[0])) {
-			while (pre[0].childNodes.length > 0) {
-			    var to_move = pre[0].childNodes[0];
-			    pre[0].removeChild(to_move);
-			    code_pre.append($(to_move));
-			    if (to_move.nodeType == to_move.TEXT_NODE
-				&& endswith(to_move.data, "\n") 
-				&& peek(pre[0])) {
-				break;
+		    pre.text(text);
+		    body.append(pre);
+		    hljs.highlightBlock(pre[0], null, true);
+		    var language = pre.attr("class");
+		    var peek = function(container, offset) {
+			var child_nodes = container.childNodes;
+			return (child_nodes.length >= 2
+				&& child_nodes[0].nodeType 
+				== child_nodes[0].ELEMENT_NODE
+				&& child_nodes[0].nodeName == "SPAN"
+				&& $(child_nodes[0]).hasClass("comment")
+				&& child_nodes[1].nodeType
+				== child_nodes[1].TEXT_NODE
+				&& startswith(child_nodes[1].data, "\n"));
+		    };
+		    while (pre[0].childNodes.length > 0) {
+			var row = $('<tr></tr>');
+			table.append(row);
+			var docs_cell = $(
+			    '<td class="docs_column_cell"></td>');
+			var docs_pre = $('<pre></pre>');
+			docs_cell.append(docs_pre);
+			row.append(docs_cell);
+			var code_cell = $(
+			    '<td class="code_column_cell"></td>');
+			var code_pre = $('<pre></pre>');
+			row.append(code_cell);
+			code_cell.append(code_pre);
+			var child_nodes = pre[0].childNodes;
+			while (peek(pre[0])) {
+			    var comment = pre[0].childNodes[0];
+			    var newline = pre[0].childNodes[1];
+			    if (newline.data == "\n") {
+				pre[0].removeChild(newline);
+				docs_pre.append($(newline));
+			    } else {
+				newline.data = trim_prefix(newline.data, "\n");
+				var unused = $('<div></div>');
+				unused.text("\n");
+				var new_node = unused[0].childNodes[0];
+				unused[0].removeChild(new_node);
+				docs_pre.append($(new_node));
+			    }
+			    pre[0].removeChild(comment);
+			    docs_pre.append($(comment));
+			}
+			if (docs_pre[0].childNodes.length > 0
+			    && pre[0].childNodes.length > 0 
+			    && pre[0].childNodes[0].nodeType
+			    == pre[0].childNodes[0].TEXT_NODE
+			    && startswith(pre[0].childNodes[0].data, "\n")) {
+			    continue;
+			}
+			while (pre[0].childNodes.length > 0 && !peek(pre[0])) {
+			    while (pre[0].childNodes.length > 0) {
+				var to_move = pre[0].childNodes[0];
+				pre[0].removeChild(to_move);
+				code_pre.append($(to_move));
+				if (to_move.nodeType == to_move.TEXT_NODE
+				    && endswith(to_move.data, "\n") 
+				    && peek(pre[0])) {
+				    break;
+				}
 			    }
 			}
 		    }
+		    _.each($(".docs_column_cell", table), function(i) {
+			var raw_code = $(i).text();
+			raw_code = line_func(raw_code);
+			$(i).html(converter.makeHtml(raw_code));
+		    });
+                    body.append(table);
 		}
-		_.each($(".docs_column_cell", table), function(i) {
-		    var raw_code = $(i).text();
-		    raw_code = line_func(raw_code);
-		    $(i).html(converter.makeHtml(raw_code));
-		});
-                body.append(table);
 	    } else {
 		if (doc.encoding == "raw") {
 		    var charcodes = utf8_encode(doc.raw);
