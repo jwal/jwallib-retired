@@ -10,6 +10,8 @@ var NAME_EXTENSIONS = {
     ".txt": "text/plain",
     "README": "text/plain",
     ".sh": "application/x-sh",
+    ".html": "text/html",
+    ".css": "text/css",
     //...
 }
 
