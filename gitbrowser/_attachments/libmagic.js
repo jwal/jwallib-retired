@@ -12,6 +12,8 @@ var NAME_EXTENSIONS = {
     ".sh": "application/x-sh",
     ".html": "text/html",
     ".css": "text/css",
+    ".md": "text/plain",
+    ".coffee": "text/x-coffeescript"
     //...
 }
 

@@ -193,8 +193,16 @@ var HIGHLIGHT_MIME_TYPES = {
     }},
     "application/javascript": {"name": "javascript", "line_func": function(l) {
 	return l.replace(/^\/\//gm, "");
+    }},
+    "text/x-coffeescript": {"name": "coffeescript", "line_func": function(l) {
+	return l.replace(/^#/gm, "");
     }}
 };
+
+function normalize_line_endings(text) {
+    var text = text.replace(/\r/g, "").replace(/\n/g, "\r\n");
+    return text;
+}
 
 function show_file_or_folder(branch_name, revision, path)
 {
@@ -204,7 +212,7 @@ function show_file_or_folder(branch_name, revision, path)
     }
     function render_tree_or_blob(doc)
     {
-	var body = $("<div></div>");
+	var body = $('<div></div>');
 	if (path.length > 0)
 	{
 	    var up_path = path.slice(0, path.length - 1);
@@ -235,6 +243,7 @@ function show_file_or_folder(branch_name, revision, path)
 		} else {
 		    throw new Error(doc.encoding);
 		}
+		var text = normalize_line_endings(text);
 		var heading = $('<h1></h1>');
 		heading.text(doc.basename);
 		var converter = new Showdown.converter();
@@ -372,7 +381,7 @@ function show_file_or_folder(branch_name, revision, path)
 	    throw new Error("Don't know how to render: " + doc.type);
 	}
 	$("#main_body").text("");
-	$("#main_body").append(body)
+	$("#main_body").append(body);
     }
     function handle_tree_or_blob(doc, remaining_path)
     {
