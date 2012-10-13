@@ -93,6 +93,46 @@ function startswith(string, prefix)
             && string.substring(0, prefix.length) == prefix);
 }
 
+function render_tree(doc, branch_name, revision, path, container) {
+    var container = $(container);
+    var table = $("<table></table>");
+    var children = doc.children.slice();
+    children.sort(function(alpha, delta) {
+	var get_key = function(i) {
+	    return [i.mode[0] != "d", i.basename];
+	};
+	var alpha_key = get_key(alpha);
+	var delta_key = get_key(delta);
+	if (alpha_key == delta_key) {
+	    return 0;
+	} else if (alpha_key < delta_key) {
+	    return -1;
+	} else {
+	    return 1;
+	}
+    });
+    for (var i = 0; i < children.length; i++)
+    {
+	var li = $("<tr></tr>");
+	var mode_span = $("<td style=\"font-family: "
+			  + "monospace;\"></td>");
+	mode_span.text(children[i].mode);
+	li.append(mode_span);
+	var sha_cell = $("<td style=\"font-family: "
+			 + "monospace;\"></td>");
+	var a = $("<a></a>");
+	var child_path = path.slice();
+	child_path.push(children[i].basename);
+	a.attr("href", make_show_url(branch_name, revision, 
+				     child_path));
+	a.text(children[i].basename);
+	sha_cell.append(a);
+	li.append(sha_cell);
+	table.append(li);
+    }
+    container.append(table);
+}
+
 function trim_prefix(string, prefix)
 {
     if (!startswith(string, prefix))
@@ -354,40 +394,16 @@ function show_file_or_folder(branch_name, revision, path)
 	}
 	else if (doc.type == "git-tree")
 	{
-	    var table = $("<table></table>");
-	    doc.children.sort(function(alpha, delta) {
-		var get_key = function(i) {
-		    return [i.mode[0] != "d", i.basename];
-		};
-		var alpha_key = get_key(alpha);
-		var delta_key = get_key(delta);
-		if (alpha_key == delta_key) {
-		    return 0;
-		} else if (alpha_key < delta_key) {
-		    return -1;
-		} else {
-		    return 1;
-		}
-	    });
-	    for (var i = 0; i < doc.children.length; i++)
-	    {
-		var li = $("<tr></tr>");
-		var mode_span = $("<td style=\"font-family: "
-				  + "monospace;\"></td>");
-		mode_span.text(doc.children[i].mode);
-		li.append(mode_span);
-		var sha_cell = $("<td style=\"font-family: "
-				 + "monospace;\"></td>");
-		var a = $("<a></a>");
-		var child_path = path.slice();
-		child_path.push(doc.children[i].basename);
-		a.attr("href", make_show_url(branch_name, revision, 
-					     child_path));
-		a.text(doc.children[i].basename);
-		sha_cell.append(a);
-		li.append(sha_cell);
-		table.append(li);
-	    }
+	    var table = $('<table class="docco_table">'
+			  + '<col class="docs_column"></col>'
+			  + '<col class="code_column"></col>'
+			  + '<tr>'
+			  + '<td class="docs_cell"></td>'
+			  + '<td class="code_cell"></td>'
+			  + '</tr>'
+			  + '</table>');
+	    var container = $(".code_cell", table);
+	    render_tree(doc, branch_name, revision, path, container);
 	    body.append(table);
 	}
 	else
