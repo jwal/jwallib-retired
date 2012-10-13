@@ -255,6 +255,15 @@ function get_text(doc) {
 
 }
 
+function get_origin() {
+    var origin = window.location.origin;
+    if (typeof origin == "undefined") {
+	origin = (window.location.protocol
+		  + "//" + window.location.host);
+    }
+    return origin + "/";
+}
+
 function show_file_or_folder(branch_name, revision, path)
 {
     function render_tree_or_blob(doc)
@@ -418,8 +427,9 @@ function show_file_or_folder(branch_name, revision, path)
 			var div = $(".docs_cell", table);
 			div.html(converter.makeHtml(text));
 			_.each($("a[href]", div), function(a) {
-			    var origin = window.location.origin + "/";
+			    var origin = get_origin();
 			    var href = $(a).attr("href");
+			    console.log(["fixing?", href, origin]);
 			    if (startswith(href, origin)) {
 				return;
 			    }
@@ -436,7 +446,7 @@ function show_file_or_folder(branch_name, revision, path)
 				pathname.lastIndexOf("/") + 1, 
 				pathname.length);
 			    $(a).attr("href", last_part + "/" + href);
-			    console.debug(href, pathname, last_part)
+			    console.log([href, pathname, last_part]);
 			})
 		    }
 
