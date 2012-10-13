@@ -101,6 +101,18 @@ class GitbrowserSeleniumTests(unittest.TestCase):
         wait_for_load()
         self.assertTrue("This is a minimal git repository for testing"
                         in driver.find_element_by_xpath('//body').text)
+        driver.find_element_by_link_text("Example Project").click()
+        wait_for_load()
+        self.assertTrue("This is a minimal git repository for testing"
+                        in driver.find_element_by_xpath('//body').text)
+        driver.find_element_by_link_text("child folder").click()
+        wait_for_load()
+        self.assertTrue("A file in a subfolder"
+                        in driver.find_element_by_xpath('//body').text)
+        driver.find_element_by_link_text("parent link").click()
+        wait_for_load()
+        self.assertTrue("This is a minimal git repository for testing"
+                        in driver.find_element_by_xpath('//body').text)
         
     def _go_to_the_selenium_stage(self):
         desired_capabilities = webdriver.DesiredCapabilities.CHROME

@@ -417,6 +417,27 @@ function show_file_or_folder(branch_name, revision, path)
 			var converter = new Showdown.converter();
 			var div = $(".docs_cell", table);
 			div.html(converter.makeHtml(text));
+			_.each($("a[href]", div), function(a) {
+			    var origin = window.location.origin + "/";
+			    var href = $(a).attr("href");
+			    if (startswith(href, origin)) {
+				return;
+			    }
+			    var absolute = new URI(href).resolve(
+				new URI(window.location + "")).toString();
+			    if (!startswith(absolute, origin)) {
+				return;
+			    }
+			    if (startswith(href, "/")) {
+				return;
+			    }
+			    var pathname = window.location.pathname;
+			    var last_part = pathname.substr(
+				pathname.lastIndexOf("/") + 1, 
+				pathname.length);
+			    $(a).attr("href", last_part + "/" + href);
+			    console.debug(href, pathname, last_part)
+			})
 		    }
 
 		    var readme_url = db_base + encodeURIComponent(
