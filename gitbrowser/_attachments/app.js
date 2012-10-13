@@ -355,6 +355,20 @@ function show_file_or_folder(branch_name, revision, path)
 	else if (doc.type == "git-tree")
 	{
 	    var table = $("<table></table>");
+	    doc.children.sort(function(alpha, delta) {
+		var get_key = function(i) {
+		    return [i.mode[0] != "d", i.basename];
+		};
+		var alpha_key = get_key(alpha);
+		var delta_key = get_key(delta);
+		if (alpha_key == delta_key) {
+		    return 0;
+		} else if (alpha_key < delta_key) {
+		    return -1;
+		} else {
+		    return 1;
+		}
+	    });
 	    for (var i = 0; i < doc.children.length; i++)
 	    {
 		var li = $("<tr></tr>");
@@ -647,7 +661,7 @@ $(function(){
 	},
 
 	redirectHome: function() {
-	    window.location.replace("/show/master/head/README");
+	    window.location.replace("/show/master/head");
 	},
 
 	show: function(branch, rev, path) {
