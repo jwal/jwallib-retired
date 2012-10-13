@@ -294,7 +294,7 @@ function show_file_or_folder(branch_name, revision, path)
 		var converter = new Showdown.converter();
 		body.append(heading);
 		if (doc.mime_type == "text/plain") {
-		    var div = $('<div class="docs_column docs_column_cell">');
+		    var div = $('<div class="docs_column docs_cell">');
 		    div.html(converter.makeHtml(text));
 		    body.append(div);
 		} else {
@@ -330,12 +330,12 @@ function show_file_or_folder(branch_name, revision, path)
 			var row = $('<tr></tr>');
 			table.append(row);
 			var docs_cell = $(
-			    '<td class="docs_column_cell"></td>');
+			    '<td class="docs_cell"></td>');
 			var docs_pre = $('<pre></pre>');
 			docs_cell.append(docs_pre);
 			row.append(docs_cell);
 			var code_cell = $(
-			    '<td class="code_column_cell"></td>');
+			    '<td class="code_cell"></td>');
 			var code_pre = $('<pre></pre>');
 			row.append(code_cell);
 			code_cell.append(code_pre);
@@ -377,7 +377,7 @@ function show_file_or_folder(branch_name, revision, path)
 			    }
 			}
 		    }
-		    _.each($(".docs_column_cell", table), function(i) {
+		    _.each($(".docs_cell", table), function(i) {
 			var raw_code = $(i).text();
 			raw_code = line_func(raw_code);
 			$(i).html(converter.makeHtml(raw_code));
