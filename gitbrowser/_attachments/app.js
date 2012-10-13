@@ -429,7 +429,6 @@ function show_file_or_folder(branch_name, revision, path)
 			_.each($("a[href]", div), function(a) {
 			    var origin = get_origin();
 			    var href = $(a).attr("href");
-			    console.log(["fixing?", href, origin]);
 			    if (startswith(href, origin)) {
 				return;
 			    }
@@ -446,7 +445,6 @@ function show_file_or_folder(branch_name, revision, path)
 				pathname.lastIndexOf("/") + 1, 
 				pathname.length);
 			    $(a).attr("href", last_part + "/" + href);
-			    console.log([href, pathname, last_part]);
 			})
 		    }
 
