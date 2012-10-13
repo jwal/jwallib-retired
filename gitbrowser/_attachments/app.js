@@ -257,10 +257,6 @@ function get_text(doc) {
 
 function show_file_or_folder(branch_name, revision, path)
 {
-    if (revision != "head")
-    {
-	throw new Error("Must be head revision, for now: " + revision);
-    }
     function render_tree_or_blob(doc)
     {
 	var body = $('<div></div>');
@@ -438,15 +434,42 @@ function show_file_or_folder(branch_name, revision, path)
 	$("#main_body").text("");
 	$("#main_body").append(body);
     }
+    get_file_or_folder({
+	"branch": branch_name,
+	"revision": revision,
+	"path": path,
+	"success": render_tree_or_blob
+    });
+}
+
+function get_file_or_folder(params)
+{
+    var branch_name = params.branch;
+    var revision = params.revision;
+    var path = params.path;
+    var success = params.success;
+    if (typeof success == "undefined") {
+	var success = function(doc) {};
+    }
+    var error = params.error;
+    if (typeof error == "undefined") {
+	var error = function(message)  {
+	    throw new Error(message);
+	};
+    }
+    if (revision != "head")
+    {
+	return error("Must be head revision, for now: " + revision);
+    }
     function handle_tree_or_blob(doc, remaining_path)
     {
 	if (remaining_path.length == 0)
 	{
-	    return render_tree_or_blob(doc);
+	    return success(doc);
 	}
 	if (doc.type != "git-tree")
 	{
-	    throw new Error("Needed a tree to recurse: " + remaining_path);
+	    return error("Needed a tree to recurse: " + remaining_path);
 	}
 	var basename = remaining_path[0];
 	var by_basename = group_by(
@@ -454,7 +477,7 @@ function show_file_or_folder(branch_name, revision, path)
 	var match = by_basename[basename];
 	if (typeof match == "undefined")
 	{
-	    throw new Error("Nothing at path: " + path);
+	    return error("Nothing at path: " + path);
 	}
 	var child_id = get1(by_basename[basename]).child._id;
 	var next_remainder = [];
@@ -483,7 +506,7 @@ function show_file_or_folder(branch_name, revision, path)
 	var branches = by_name[branch_name];
 	if (typeof branches == "undefined")
 	{
-	    throw new Error("Missing branch: " + branch_name);
+	    return error("Missing branch: " + branch_name);
 	}
 	var branch = get1(branches);
 	$.get(db_base + encodeURIComponent(branch._id),
@@ -566,7 +589,7 @@ $(function(){
 	},
 
 	handleUnknown: function(unknown) {
-	    $(".main_body").html('<h1>Not found</h1><p>The location '
+	    $("#main_body").html('<h1>Not found</h1><p>The location '
 				 + '<span class="unknown_url" '
 				 + 'style="font-style: italic;">'
 				 + '</span> is not recognized.');
@@ -581,6 +604,32 @@ $(function(){
     Backbone.history.start({
 	pushState: true, 
 	root: base_path
+    });
+
+    function set_title(title) {
+	$(".brand").text(title);
+	document.title = title;
+    }
+
+    function title_error(message) {
+	set_title("Git Browser");
+    }
+    get_file_or_folder({
+	"branch": "master",
+	"revision": "head",
+	"path": [".gitbrowser-project.json"],
+	"error": title_error,
+	"success": function(doc) {
+	    try {
+		var properties = JSON.parse(get_text(doc));
+	    } catch(err) {
+		return title_error("Exception loading JSON: " + err)
+	    }
+	    if (typeof properties.title == "undefined") {
+		return title_error("No title in project JSON");
+	    }
+	    set_title(properties.title);
+	}
     });
 });
 

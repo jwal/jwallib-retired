@@ -33,12 +33,15 @@ class GitbrowserSeleniumTests(unittest.TestCase):
 
         def wait_for_load():
             while True:
-                if "Loading" in driver.find_element_by_xpath('//body').text:
+                if ("Loading" in driver.find_element_by_xpath('//body').text
+                    or driver.find_element_by_xpath('//title').text == ""):
                     time.sleep(0.1)
                 else:
                     break
     
         wait_for_load()
+        self.assertTrue("Example Project" 
+                        in driver.find_element_by_xpath('//title').text)
         self.assertTrue("This is a minimal git repository for testing" 
                         in driver.find_element_by_xpath('//body').text)
         driver.find_element_by_link_text("README").click()
@@ -185,6 +188,11 @@ if __name__ == "__main__":\r\n\
   # inline with the code instead of one that is shown in the left panel.\r\n\
   unittest.main()\r\n\
 """)
+            subprocess.check_call(git + ["add", path])
+        ## write file .gitbrowser-project.json
+            path = os.path.join(temp_dir, ".gitbrowser-project.json")
+            with open(path, "wb") as fh:
+                fh.write('{"title": "Example Project"}')
             subprocess.check_call(git + ["add", path])
         ## write file subfolder/README 
             path = os.path.join(temp_dir, "subfolder", "README")
