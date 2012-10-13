@@ -1,0 +1,28 @@
+body {
+    padding-top: 60px; /* 60px to make the container 
+                          go all the way to the bottom of the topbar */
+    overflow-y: scroll;
+}
+.code_cell, .docs_cell {
+    vertical-align: top;
+}
+.docco_table {
+    width: 100%;
+}
+.code_column {
+    width: 50%;
+    border: 1px solid grey;
+    border-radius: 0.5em;
+    background: #fdf6e3;
+}
+.docs_column {
+    width: 50%;
+}
+.docs_cell pre {
+    background: #FDF6E3;
+}
+.code_cell pre {
+    border-radius: 0;
+    border: 0;
+    background: transparent;
+}
