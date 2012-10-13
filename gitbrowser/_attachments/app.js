@@ -244,6 +244,17 @@ function normalize_line_endings(text) {
     return text;
 }
 
+function get_text(doc) {
+    if (doc.encoding == "raw") {
+	return doc.raw;
+    } else if (doc.encoding == "base64") {
+	return utf8_decode(b64decode(doc.base64));
+    } else {
+	throw new Error(doc.encoding);
+    }
+
+}
+
 function show_file_or_folder(branch_name, revision, path)
 {
     if (revision != "head")
@@ -276,13 +287,7 @@ function show_file_or_folder(branch_name, revision, path)
 		}
 	    }
 	    if (is_text) {
-		if (doc.encoding == "raw") {
-		    var text = doc.raw;
-		} else if (doc.encoding == "base64") {
-		    var text = utf8_decode(b64decode(doc.base64));
-		} else {
-		    throw new Error(doc.encoding);
-		}
+		var text = get_text(doc);
 		var text = normalize_line_endings(text);
 		var heading = $('<h1></h1>');
 		heading.text(doc.basename);
@@ -394,6 +399,9 @@ function show_file_or_folder(branch_name, revision, path)
 	}
 	else if (doc.type == "git-tree")
 	{
+	    var heading = $('<h1></h1>');
+	    heading.text(path[-1]);
+	    body.append(heading);
 	    var table = $('<table class="docco_table">'
 			  + '<col class="docs_column"></col>'
 			  + '<col class="code_column"></col>'
@@ -404,6 +412,23 @@ function show_file_or_folder(branch_name, revision, path)
 			  + '</table>');
 	    var container = $(".code_cell", table);
 	    render_tree(doc, branch_name, revision, path, container);
+	    for (var i = 0; i < doc.children.length;i ++) {
+		if (doc.children[i].basename == "README"
+		    && doc.children[i].mode[0] != "d") {
+
+		    function handle_readme(doc) {
+			var text = get_text(doc);
+			var converter = new Showdown.converter();
+			var div = $(".docs_cell", table);
+			div.html(converter.makeHtml(text));
+		    }
+
+		    var readme_url = db_base + encodeURIComponent(
+			doc.children[i].child._id)
+		    $.get(readme_url, {}, handle_readme, "json");
+		    break;
+		}
+	    }
 	    body.append(table);
 	}
 	else
