@@ -64,7 +64,44 @@ class GitbrowserSeleniumTests(unittest.TestCase):
         wait_for_load()
         self.assertTrue("A file in a subfolder"
                         in driver.find_element_by_xpath('//body').text)
-
+        driver.find_element_by_link_text("README").click()
+        wait_for_load()
+        self.assertTrue("A file in a subfolder"
+                        in driver.find_element_by_xpath('//body').text)
+        driver.find_element_by_link_text("parent link").click()
+        wait_for_load()
+        self.assertTrue("This is a minimal git repository for testing"
+                        in driver.find_element_by_xpath('//body').text)
+        driver.find_element_by_link_text("README").click()
+        wait_for_load()
+        self.assertTrue("This is a minimal git repository for testing"
+                        in driver.find_element_by_xpath('//body').text)
+        driver.find_element_by_link_text("google").click()
+        wait_for_load()
+        self.assertTrue("Google Search"
+                        in driver.find_element_by_xpath('//body').text)
+        driver.back()
+        wait_for_load()
+        self.assertTrue("This is a minimal git repository for testing"
+                        in driver.find_element_by_xpath('//body').text)
+        driver.find_element_by_link_text("hexdump file").click()
+        wait_for_load()
+        self.assertTrue("000000e0  e0 e1 e2 e3 e4 e5 e6 e7  e8 e9 ea "
+                        "eb ec ed ee ef  |................|"
+                        in driver.find_element_by_xpath('//body').text)
+        driver.back()
+        wait_for_load()
+        self.assertTrue("This is a minimal git repository for testing"
+                        in driver.find_element_by_xpath('//body').text)
+        driver.find_element_by_link_text("child folder").click()
+        wait_for_load()
+        self.assertTrue("A file in a subfolder"
+                        in driver.find_element_by_xpath('//body').text)
+        driver.back()
+        wait_for_load()
+        self.assertTrue("This is a minimal git repository for testing"
+                        in driver.find_element_by_xpath('//body').text)
+        
     def _go_to_the_selenium_stage(self):
         desired_capabilities = webdriver.DesiredCapabilities.CHROME
         desired_capabilities["version"] = ""
@@ -138,18 +175,25 @@ class GitbrowserSeleniumTests(unittest.TestCase):
         ## write file README
             with open(path, "wb") as fh:
                 fh.write("""\
-# Purpose\r\n\
-\r\n\
-This is a minimal git repository for testing\r\n\
-\r\n\
-# Example Markdown\r\n\
-\r\n\
-Readme files like this are Markdown formatted:\r\n\
-\r\n\
- * Bullet points\r\n\
- * Headings\r\n\
- * Code blocks\r\n\
- * _etc_\r\n\
+# Purpose
+
+This is a minimal git repository for testing
+
+# Example Markdown
+
+Readme files like this are Markdown formatted:
+
+ * Bullet points
+ * Headings
+ * Code blocks
+ * _etc_
+
+They can have hyperlinks:
+
+ * to other hosts like [google](http://www.google.com/)
+ * absolute paths, like the [hexdump file](/show/master/head/binary-file)
+ * relative paths, like the [child folder](subfolder)
+
 """)
             subprocess.check_call(git + ["add", path])
         ## write file binary 
@@ -198,7 +242,7 @@ if __name__ == "__main__":\r\n\
             path = os.path.join(temp_dir, "subfolder", "README")
             os.makedirs(os.path.dirname(path))
             with open(path, "wb") as fh:
-                fh.write("A file in a subfolder\r\n")
+                fh.write("A file in a subfolder with a [parent link](..)")
             subprocess.check_call(git + ["add", path])
             subprocess.check_call(git + ["commit", "-m", "Update"])
         # Copy the git repository to the couchdb

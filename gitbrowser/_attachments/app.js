@@ -200,9 +200,9 @@ function split_path(path_string)
 	var decoded = decodeURIComponent(path[j]);
 	if (decoded.length == 0)
 	{
-	    throw new Error("Path component seems to contain an empty string"
-			    + ": " + path_string);
-	}
+	    throw new Error("Path component seems to contain an "
+			    + "empty string: " + path_string);
+	    }
 	decoded_path.push(decoded);
     }
     return decoded_path;
@@ -580,8 +580,16 @@ $(function(){
 	},
 
 	show: function(branch, rev, path) {
-	    var path = split_path(path);
-	    show_file_or_folder(branch, rev, path);
+	    if (path == "") { 
+		window.location.replace(make_show_url(branch, rev, []));
+	    } else if (path.substr(path.length - 1, path.length) == "/") {
+		var better_path = path.substr(0, path.length - 1);
+		window.location.replace(
+		    make_show_url(branch, rev, better_path));
+	    } else {
+		var path = split_path(path);
+		show_file_or_folder(branch, rev, path);
+	    }
 	},
 
 	showRoot: function(branch, rev) {
