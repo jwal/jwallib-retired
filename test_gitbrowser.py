@@ -41,8 +41,6 @@ class GitbrowserSeleniumTests(unittest.TestCase):
         wait_for_load()
         self.assertTrue("This is a minimal git repository for testing" 
                         in driver.find_element_by_xpath('//body').text)
-        driver.find_element_by_link_text("[up]").click()
-        wait_for_load()
         driver.find_element_by_link_text("README").click()
         wait_for_load()
         self.assertTrue("This is a minimal git repository for testing" 
@@ -60,8 +58,6 @@ class GitbrowserSeleniumTests(unittest.TestCase):
         driver.find_element_by_link_text("[up]").click()
         wait_for_load()    
         driver.find_element_by_link_text("subfolder").click()
-        wait_for_load()
-        driver.find_element_by_link_text("README").click()
         wait_for_load()
         self.assertTrue("A file in a subfolder"
                         in driver.find_element_by_xpath('//body').text)
