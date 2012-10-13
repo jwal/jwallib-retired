@@ -289,7 +289,7 @@ function show_file_or_folder(branch_name, revision, path)
 		var converter = new Showdown.converter();
 		body.append(heading);
 		if (doc.mime_type == "text/plain") {
-		    var div = $('<div class="docs_column">');
+		    var div = $('<div class="docs_column docs_column_cell">');
 		    div.html(converter.makeHtml(text));
 		    body.append(div);
 		} else {
