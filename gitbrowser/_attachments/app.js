@@ -236,6 +236,9 @@ var HIGHLIGHT_MIME_TYPES = {
     }},
     "text/x-coffeescript": {"name": "coffeescript", "line_func": function(l) {
 	return l.replace(/^#/gm, "");
+    }},
+    "text/x-sql": {"name": "sql", "line_func": function(l) {
+        return l.replace(/^\-\-/gm, "");
     }}
 };
 

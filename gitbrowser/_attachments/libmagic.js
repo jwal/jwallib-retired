@@ -13,7 +13,8 @@ var NAME_EXTENSIONS = {
     ".html": "text/html",
     ".css": "text/css",
     ".md": "text/plain",
-    ".coffee": "text/x-coffeescript"
+    ".coffee": "text/x-coffeescript",
+    ".sql": "text/x-sql"
     //...
 }
 
