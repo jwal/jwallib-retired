@@ -32,7 +32,10 @@ class GitbrowserSeleniumTests(unittest.TestCase):
     def _the_actual_tests(self, driver):
 
         def wait_for_load():
+            start_time = time.time()
             while True:
+                if time.time() - 600 > start_time:
+                    raise Exception("Ten minutes? Too long to wait")
                 if ("Loading" in driver.find_element_by_xpath('//body').text
                     or driver.find_element_by_xpath('//title').text == ""):
                     time.sleep(0.1)
@@ -138,33 +141,49 @@ class GitbrowserSeleniumTests(unittest.TestCase):
             driver.quit()
 
 
-#        drivers = []
-#        for name in dir(webdriver.DesiredCapabilities):
-#            if name.startswith("__"):
-#                continue
-#            drivers.append(getattr(webdriver.DesiredCapabilities, name))
-#        drivers = [d for d in drivers if d["browserName"] != "htmlunit"]
-#        drivers = group_by(drivers, lambda i: i["browserName"])
-#        sauce_browsers = get("https://saucelabs.com/rest/v1/info/browsers")
-#        sauce_browsers = [b for b in sauce_browsers 
-#                          if "[proxy mode]" not in b["long_name"].lower()]
-#        for browser in sauce_browsers:
-#            driver = drivers.get(browser["long_name"].lower())
-#            if driver is None:
-#                continue
-#            desired_capabilities = driver
-#            desired_capabilities["version"] = browser["short_version"]
-#            desired_capabilities["platform"] = browser["os"]
-#            desired_capabilities["name"] = "Git Browser selenium tests"
-#            driver = webdriver.Remote(
-#                desired_capabilities=desired_capabilities,
-#                command_executor=self.saucelabs_url)
-#            try:
-#                driver.implicitly_wait(30)
-#                driver.get(self.public_url)
-#                self._the_actual_tests(driver)
-#            finally:
-#                driver.quit()
+       # drivers = []
+       # for name in dir(webdriver.DesiredCapabilities):
+       #     if name.startswith("__"):
+       #         continue
+       #     drivers.append(getattr(webdriver.DesiredCapabilities, name))
+       # drivers = [d for d in drivers if d["browserName"] != "htmlunit"]
+       # drivers = group_by(drivers, lambda i: i["browserName"])
+
+
+       # sauce_browsers = get("https://saucelabs.com/rest/v1/info/browsers")
+       # sauce_browsers = [b for b in sauce_browsers 
+       #                   if not b["selenium_name"].endswith("proxy")
+       #                   and b["selenium_name"] != "iehta"
+       #                   and b["automation_backend"] == "selenium"
+       #                   and not ("Windows" in b["os"] and b["selenium_name"] == "safari")
+       #                   and not ("Mac" in b["os"] and b["selenium_name"] == "firefox")
+       #                   and not ("Mac" in b["os"] and b["selenium_name"] == "chrome")]
+       # print "@@@ how many?", len(sauce_browsers)
+       # failed = []
+       # passed = []
+       # for browser in sauce_browsers:
+       #     print "@@@ trying", browser
+       #     try:
+       #         desired_capabilities = {}
+       #         desired_capabilities["browserName"] = browser["selenium_name"]
+       #         desired_capabilities["version"] = browser["long_version"]
+       #         desired_capabilities["platform"] = browser["os"]
+       #         desired_capabilities["name"] = "Git Browser selenium tests"
+       #         driver = webdriver.Remote(
+       #             desired_capabilities=desired_capabilities,
+       #             command_executor=self.saucelabs_url)
+       #         try:
+       #             driver.implicitly_wait(30)
+       #             driver.get(self.public_url)
+       #             # self._the_actual_tests(driver)
+       #         finally:
+       #             driver.quit()
+       #     except Exception:
+       #         failed.append(browser)
+       #     else:
+       #         passed.append(browser)
+       # print "@@@ failed", pformat(failed)
+       # print "@@@ passed", pformat(passed)
 
     def _run_test(self):
         # Wipe out all git-related documents and the design document
