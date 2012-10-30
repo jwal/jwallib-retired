@@ -2,10 +2,13 @@
 
 from cStringIO import StringIO
 from jwalutil import trim
+from pipes import quote as shell_escape
 import subprocess
 
 def call(argv, **kwargs):
-    # print "~~~", argv
+    do_print = kwargs.pop("do_print", False)
+    if do_print:
+        print "~~~", " ".join(shell_escape(a) for a in argv)
     do_wait = kwargs.pop("do_wait", True)
     kwargs.setdefault("stdout", subprocess.PIPE)
     kwargs.setdefault("stderr", subprocess.STDOUT)
