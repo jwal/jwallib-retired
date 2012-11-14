@@ -1,5 +1,7 @@
 # Personal repository for James Ascroft-Leigh
 
+[![Build Status](https://jwal.ci.cloudbees.com/job/jwallib/badge/icon)](https://jwal.ci.cloudbees.com/job/jwallib/)
+
 This repository has some snippets of code that I have found useful in
 the past.  As you can see from the commit history, my propensity to
 commit code here isn't constant over time.
