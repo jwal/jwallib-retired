@@ -22,7 +22,7 @@ call = lambda *a, **kw: call_no_print(
 
 def force_rm(path):
     path = os.path.abspath(path)
-    call(["sudo", "python", "-c", """
+    call_no_print(["sudo", "python", "-c", """
 from __future__ import with_statement
 assert __name__ == "__main__"
 import sys
@@ -76,6 +76,7 @@ while True:
     if not all_good:
         time.sleep(0.1)
 """, path])
+    call(["sudo", "rm", "-rf", "--one-file-system", path])
 
 def basebox(config):
     sha1sum = config["base_image"].get("sha1sum")
@@ -111,20 +112,46 @@ def basebox(config):
         call(["rm", "-f", config["img_path"]])
         call(["qemu-img", "create", "-f", "qcow2", "-o", 
               "backing_file=" + objpath, config["img_path"] + ".tmp"])
-        call(["mv", config["img_path"] + ".tmp", config["img_path"]])
-    call(["sudo", "modprobe", "nbd"])
-    nbd_path = os.path.join("/dev", config["nbd"])
-    call(["sudo", "qemu-nbd", "--disconnect", nbd_path])
-    call(["sudo", "qemu-nbd", "--connect", nbd_path, config["img_path"]])
-    mnt_path = config["mnt_path"]
-    force_rm(mnt_path)
-    call(["mkdir", "-p", mnt_path])
-    call(["sudo", "mount", nbd_path + "p1", mnt_path])
-    for relpath in ["proc", "dev", "dev/pts", "sys"]:
-        src = os.path.join("/", relpath)
-        dst = os.path.join(mnt_path, relpath)
-        call(["mkdir", "-p", dst])
-        call(["sudo", "mount", "--bind", src, dst])
+        call(["sudo", "modprobe", "nbd"])
+        nbd_path = os.path.join("/dev", config["nbd"])
+        call(["sudo", "qemu-nbd", "--disconnect", nbd_path])
+        call(["sudo", "qemu-nbd", "--connect", nbd_path, 
+              config["img_path"] + ".tmp"])
+        mnt_path = config["mnt_path"]
+        force_rm(mnt_path)
+        call(["mkdir", "-p", mnt_path])
+        call(["sudo", "mount", nbd_path + "p1", mnt_path])
+        for relpath in ["proc", "dev", "dev/pts", "sys"]:
+            src = os.path.join("/", relpath)
+            dst = os.path.join(mnt_path, relpath)
+            call(["mkdir", "-p", dst])
+            call(["sudo", "mount", "--bind", src, dst])
+        resolvconf = os.path.join(mnt_path, "etc/resolv.conf")
+        force_rm(resolvconf)
+        call(["sudo", "cp", "/etc/resolv.conf", resolvconf])
+        call(["sudo", "chroot", mnt_path, "apt-get", "update"], stdout=None)
+        call(["sudo", "chroot", mnt_path, "apt-get", "install", "--yes",
+              "language-pack-en"], stdout=None)
+        call(["sudo", "chroot", mnt_path, "apt-get", "install", "--yes",
+              "openssh-server"], stdout=None)
+        call(["sudo", "chroot", mnt_path, "bash", "-c", 
+              "rm -rf /etc/ssh/ssh_host_*"])
+        call(["sudo", "chroot", mnt_path, "dpkg-reconfigure", 
+              "openssh-server"], stdout=None)
+        pubkey_path = os.path.join("ssh_host_ecdsa_key.pub")
+        call(["cp", os.path.join(mnt_path, "etc", "ssh", 
+                                 "ssh_host_ecdsa_key.pub"), 
+              config["host_key_path"]])
+        force_rm(config["ssh_key_path"])
+        call(["ssh-keygen", "-P", "", "-f", config["ssh_key_path"]])
+        ak_path = os.path.join(mnt_path, "root", ".ssh", "authorized_keys")
+        call(["sudo", "mkdir", "-p", os.path.dirname(ak_path)])
+        force_rm(ak_path)
+        call(["sudo", "cp", config["ssh_key_path"] + ".pub", ak_path])
+        call(["sudo", "chroot", mnt_path, "bash"],
+             stdout=None, stderr=None, stdin=None)
+        # force_rm(mnt_path)
+        # call(["mv", config["img_path"] + ".tmp", config["img_path"]])
 
 def expand_config(config):
     config.setdefault("system_root", os.path.join(config["home"], ".basebox"))
@@ -147,14 +174,13 @@ def expand_config(config):
     else:
         config.setdefault("project_cache", {})
     config.setdefault("do_write_project_cache", True)
+    project_dir = os.path.join(config["system_root"], "projects", 
+                               config["project_key"])
+    config.setdefault("img_path", os.path.join(project_dir, "disk.img"))
+    config.setdefault("mnt_path", os.path.join(project_dir, "mnt"))
     config.setdefault(
-        "img_path", 
-        os.path.join(config["system_root"], "projects", config["project_key"], 
-                     "disk.img"))
-    config.setdefault(
-        "mnt_path", 
-        os.path.join(config["system_root"], "projects", config["project_key"], 
-                     "mnt"))
+        "host_key_path", os.path.join(project_dir, "ssh_host_ecdsa_key.pub"))
+    config.setdefault("ssh_key_path", os.path.join(project_dir, "ssh_key.pub"))
     config.setdefault("nbd", "nbd0")
 
 def find_config_path(on_not_found=on_error_raise):
@@ -172,9 +198,13 @@ def find_config_path(on_not_found=on_error_raise):
 
 def main(argv):
     parser = optparse.OptionParser(__doc__)
+    parser.add_option("--tear-down", dest="tear_down_dir")
     options, args = parser.parse_args(argv)
     if len(args) > 0:
         parser.error("Unexpected: %r" % (args,))
+    if options.tear_down_dir is not None:
+        force_rm(options.tear_down_dir)
+        return
     config_path = find_config_path(on_not_found=parser.error)
     config = json.loads(read_file(config_path))
     config.setdefault("project_path", os.path.dirname(config_path))
