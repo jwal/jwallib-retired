@@ -79,6 +79,15 @@ while True:
     call(["sudo", "rm", "-rf", "--one-file-system", path])
 
 def basebox(config):
+
+    def flush_cache():
+        if config["do_write_project_cache"]:
+            call_no_print(
+                ["mkdir", "-p", os.path.dirname(config["project_cache_path"])])
+            with open(config["project_cache_path"], "wb") as fh:
+                fh.write(json.dumps(config["project_cache"]))
+
+    flush_cache()
     sha1sum = config["base_image"].get("sha1sum")
     if sha1sum is None:
         sha1sum = config["project_cache"].get("base_image_sha1sum")
@@ -108,6 +117,7 @@ def basebox(config):
             config["project_cache"]["base_image_sha1sum"] = tmp_sha1sum
         finally:
             shutil.rmtree(tmp_path)
+    flush_cache()
     if not os.path.exists(config["img_path"]):
         call(["rm", "-f", config["img_path"]])
         call(["qemu-img", "create", "-f", "qcow2", "-o", 
@@ -124,7 +134,7 @@ def basebox(config):
         for relpath in ["proc", "dev", "dev/pts", "sys"]:
             src = os.path.join("/", relpath)
             dst = os.path.join(mnt_path, relpath)
-            call(["mkdir", "-p", dst])
+            call(["sudo", "mkdir", "-p", dst])
             call(["sudo", "mount", "--bind", src, dst])
         resolvconf = os.path.join(mnt_path, "etc/resolv.conf")
         force_rm(resolvconf)
@@ -148,10 +158,10 @@ def basebox(config):
         call(["sudo", "mkdir", "-p", os.path.dirname(ak_path)])
         force_rm(ak_path)
         call(["sudo", "cp", config["ssh_key_path"] + ".pub", ak_path])
-        call(["sudo", "chroot", mnt_path, "bash"],
-             stdout=None, stderr=None, stdin=None)
-        # force_rm(mnt_path)
-        # call(["mv", config["img_path"] + ".tmp", config["img_path"]])
+        # call(["sudo", "chroot", mnt_path, "bash"],
+        #      stdout=None, stderr=None, stdin=None)
+        force_rm(mnt_path)
+        call(["mv", config["img_path"] + ".tmp", config["img_path"]])
 
 def expand_config(config):
     config.setdefault("system_root", os.path.join(config["home"], ".basebox"))
@@ -212,11 +222,6 @@ def main(argv):
     config.setdefault("home", os.path.abspath(os.path.expanduser("~")))
     expand_config(config)
     basebox(config)
-    if config["do_write_project_cache"]:
-        call_no_print(
-            ["mkdir", "-p", os.path.dirname(config["project_cache_path"])])
-        with open(config["project_cache_path"], "wb") as fh:
-            fh.write(json.dumps(config["project_cache"]))
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))
