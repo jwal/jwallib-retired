@@ -10,6 +10,7 @@ def call(argv, **kwargs):
     if do_print:
         print "~~~", " ".join(shell_escape(a) for a in argv)
     do_wait = kwargs.pop("do_wait", True)
+    handle_rc = kwargs.pop("handle_rc", lambda rc: None)
     kwargs.setdefault("stdout", subprocess.PIPE)
     kwargs.setdefault("stderr", subprocess.STDOUT)
     rc = kwargs.pop("check_rc", 0)
@@ -21,6 +22,7 @@ def call(argv, **kwargs):
         raise Exception("Failed to spawn child process %r: %s" % (argv, e))
     if do_wait:
         stdout, stderr = child.communicate()
+        handle_rc(child.returncode)
         if do_check:
             if child.returncode != rc:
                 raise Exception("""\

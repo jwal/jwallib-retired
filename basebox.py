@@ -13,6 +13,7 @@ import optparse
 import os
 import sys
 from process import call as call_no_print
+from process import shell_escape
 import tempfile
 import shutil
 import hashlib
@@ -83,7 +84,7 @@ while True:
 
 def get_vm_state(vm_name, on_no_state=on_error_raise):
     assert " " not in vm_name, vm_name
-    out = call(["virsh", "--connect", "lxc://", "list", "--all"])
+    out = call_no_print(["virsh", "--connect", "lxc://", "list", "--all"])
     out = out.split("\r\n")
     assert out[0].split() == ["Id", "Name", "State"], out
     assert out[1] == "-" * 52, out
@@ -168,20 +169,34 @@ def basebox(config, argv):
               "rm -rf /etc/ssh/ssh_host_*"])
         call(["sudo", "chroot", mnt_path, "dpkg-reconfigure", 
               "openssh-server"], stdout=None)
-        pubkey_path = os.path.join("ssh_host_ecdsa_key.pub")
         call(["cp", os.path.join(mnt_path, "etc", "ssh", 
                                  "ssh_host_ecdsa_key.pub"), 
               config["host_key_path"]])
+        call(["bash", "-c", 'echo basebox $(cat "$1") > "$2"', "-",
+              config["host_key_path"], config["host_key_path"] + ".known"])
         force_rm(config["ssh_key_path"])
         call(["ssh-keygen", "-P", "", "-f", config["ssh_key_path"]])
         ak_path = os.path.join(mnt_path, "root", ".ssh", "authorized_keys")
         call(["sudo", "mkdir", "-p", os.path.dirname(ak_path)])
         force_rm(ak_path)
         call(["sudo", "cp", config["ssh_key_path"] + ".pub", ak_path])
+        call(["sudo", "bash", "-c", 'echo "$1" > "$2"', "-",
+              """\
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet static
+  address 192.168.122.200
+  netmask 255.255.255.0
+  network 192.168.122.0
+  gateway 192.168.122.1
+  dns-nameservers 192.168.122.1
+""", os.path.join(mnt_path, "etc", "network", "interfaces")])
         #### Run chef here?
         force_rm(mnt_path)
         call(["mv", config["img_path"] + ".tmp", config["img_path"]])
-    if get_vm_state(config["vm_name"]) != "running":
+    if get_vm_state(config["vm_name"], on_no_state=lambda m: None) != "running":
         call(["qemu-img", "create", "-f", "qcow2", "-o", 
               "backing_file=" + config["img_path"], 
               config["img_path"] + ".tmp"])
@@ -197,7 +212,8 @@ def basebox(config, argv):
         call(["virsh", "--connect", "lxc://", "destroy", config["vm_name"]],
              do_check=False)
         while True:
-            if get_vm_state(config["vm_name"]) == "shut off":
+            if get_vm_state(config["vm_name"], 
+                            on_no_state=lambda m: "shut off") == "shut off":
                 break
             time.sleep(0.1)
         call(["virsh", "--connect", "lxc://", "undefine", config["vm_name"]],
@@ -240,8 +256,24 @@ def basebox(config, argv):
               lxml.etree.tostring(xml), xml_path])
         call(["virsh", "--connect", "lxc://", "define", xml_path])
         call(["virsh", "--connect", "lxc://", "start", config["vm_name"]])
-    # while True:
-    #     rc = call(["ssh", "-i", ])
+    ssh_argv = ["ssh", "-i", config["ssh_key_path"],
+                "-oHostKeyAlias=basebox", 
+                "-oHashKnownHosts=no",
+                "-t",
+                "-q",
+                "-oUserKnownHostsFile=" + config["host_key_path"] + ".known",
+                "root@192.168.122.200"]
+    # print "~~~", " ".join(shell_escape(a) for a in ssh_argv)
+    while True:
+        rc = []
+        call_no_print(ssh_argv + ["true"], do_check=False, handle_rc=rc.append)
+        rc = rc[0]
+        if rc == 0:
+            break
+        time.sleep(0.1)
+    exec_argv = ssh_argv + [" ".join(shell_escape(a) for a in argv)]
+    os.execvp(exec_argv[0], exec_argv)
+    
 
 def expand_config(config):
     config.setdefault("system_root", os.path.join(config["home"], ".basebox"))
@@ -272,7 +304,7 @@ def expand_config(config):
     config.setdefault("mnt_path", os.path.join(project_dir, "mnt"))
     config.setdefault(
         "host_key_path", os.path.join(project_dir, "ssh_host_ecdsa_key.pub"))
-    config.setdefault("ssh_key_path", os.path.join(project_dir, "ssh_key.pub"))
+    config.setdefault("ssh_key_path", os.path.join(project_dir, "ssh_key"))
     config.setdefault("nbd", "nbd0")
     config.setdefault("vm_name", "basebox" + config["project_key"])
 
