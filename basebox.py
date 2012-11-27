@@ -324,6 +324,8 @@ def find_config_path(on_not_found=on_error_raise):
 def main(argv):
     parser = optparse.OptionParser(__doc__)
     parser.add_option("--tear-down", dest="tear_down_dir")
+    parser.add_option("--show-config", dest="do_show_config",
+                      action="store_const", const=True, default=False)
     parser.allow_interspersed_args = False
     options, args = parser.parse_args(argv)
     if len(args) == 0:
@@ -337,6 +339,9 @@ def main(argv):
     config.setdefault("cwd", os.path.abspath("."))
     config.setdefault("home", os.path.abspath(os.path.expanduser("~")))
     expand_config(config)
+    if options.do_show_config:
+        print json.dumps(config, indent=2, sort_keys=True)
+        return
     basebox(config, args)
 
 if __name__ == "__main__":
