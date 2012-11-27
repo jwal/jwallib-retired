@@ -16,6 +16,8 @@ from process import call as call_no_print
 import tempfile
 import shutil
 import hashlib
+import lxml.etree
+import time
 
 call = lambda *a, **kw: call_no_print(
     *a, **dict(kw.items() + [("do_print", True)]))
@@ -78,7 +80,25 @@ while True:
 """, path])
     call(["sudo", "rm", "-rf", "--one-file-system", path])
 
-def basebox(config):
+
+def get_vm_state(vm_name, on_no_state=on_error_raise):
+    assert " " not in vm_name, vm_name
+    out = call(["virsh", "--connect", "lxc://", "list", "--all"])
+    out = out.split("\r\n")
+    assert out[0].split() == ["Id", "Name", "State"], out
+    assert out[1] == "-" * 52, out
+    out = out[2:]
+    for line in out:
+        if line == "":
+            continue
+        parts = line.split()
+        id, name, state = parts[0], parts[1], " ".join(parts[2:])
+        if name != vm_name:
+            continue
+        return state
+    return on_no_state("No state found for vm: %s" % (vm_name,))
+
+def basebox(config, argv):
 
     def flush_cache():
         if config["do_write_project_cache"]:
@@ -158,10 +178,70 @@ def basebox(config):
         call(["sudo", "mkdir", "-p", os.path.dirname(ak_path)])
         force_rm(ak_path)
         call(["sudo", "cp", config["ssh_key_path"] + ".pub", ak_path])
-        # call(["sudo", "chroot", mnt_path, "bash"],
-        #      stdout=None, stderr=None, stdin=None)
+        #### Run chef here?
         force_rm(mnt_path)
         call(["mv", config["img_path"] + ".tmp", config["img_path"]])
+    if get_vm_state(config["vm_name"]) != "running":
+        call(["qemu-img", "create", "-f", "qcow2", "-o", 
+              "backing_file=" + config["img_path"], 
+              config["img_path"] + ".tmp"])
+        call(["sudo", "modprobe", "nbd"])
+        nbd_path = os.path.join("/dev", config["nbd"])
+        call(["sudo", "qemu-nbd", "--disconnect", nbd_path])
+        call(["sudo", "qemu-nbd", "--connect", nbd_path, 
+              config["img_path"] + ".tmp"])
+        mnt_path = config["mnt_path"]
+        force_rm(mnt_path)
+        call(["mkdir", "-p", mnt_path])
+        call(["sudo", "mount", nbd_path + "p1", mnt_path])
+        call(["virsh", "--connect", "lxc://", "destroy", config["vm_name"]],
+             do_check=False)
+        while True:
+            if get_vm_state(config["vm_name"]) == "shut off":
+                break
+            time.sleep(0.1)
+        call(["virsh", "--connect", "lxc://", "undefine", config["vm_name"]],
+             do_check=False)
+        definition = """\
+<domain type="lxc">
+  <name>TEMPLATE: name</name>
+  <memory>524288</memory>
+  <os>
+    <type arch="x86_64">exe</type>
+    <init>/sbin/init</init>
+  </os>
+  <vcpu>2</vcpu>
+  <clock offset="utc"/>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>destroy</on_crash>
+  <devices>
+    <emulator>/usr/lib/libvirt/libvirt_lxc</emulator>
+    <filesystem type="mount">
+      <source dir="TEMPLATE: root_dir"/>
+      <target dir="/"/>
+    </filesystem>
+    <interface type="bridge">
+      <source bridge="virbr0"/>
+    </interface>
+    <console type="pty">
+      <target port="0"/>
+    </console>
+  </devices>
+</domain>
+"""
+        xml = lxml.etree.fromstring(definition)
+        for match in xml.xpath(".//name"):
+            match.text = config["vm_name"]
+        for match in xml.xpath(".//filesystem//source"):
+            match.attrib["dir"] = mnt_path
+        xml_path = os.path.join(config["project_dir"], "libvirt.xml")
+        call(["bash", "-c", 'echo "$1" > "$2"', "-",
+              lxml.etree.tostring(xml), xml_path])
+        call(["virsh", "--connect", "lxc://", "define", xml_path])
+        call(["virsh", "--connect", "lxc://", "start", config["vm_name"]])
+    # while True:
+    #     rc = call(["ssh", "-i", ])
 
 def expand_config(config):
     config.setdefault("system_root", os.path.join(config["home"], ".basebox"))
@@ -184,14 +264,17 @@ def expand_config(config):
     else:
         config.setdefault("project_cache", {})
     config.setdefault("do_write_project_cache", True)
-    project_dir = os.path.join(config["system_root"], "projects", 
-                               config["project_key"])
+    config.setdefault("project_dir", 
+                      os.path.join(config["system_root"], "projects", 
+                                   config["project_key"]))
+    project_dir = config["project_dir"]
     config.setdefault("img_path", os.path.join(project_dir, "disk.img"))
     config.setdefault("mnt_path", os.path.join(project_dir, "mnt"))
     config.setdefault(
         "host_key_path", os.path.join(project_dir, "ssh_host_ecdsa_key.pub"))
     config.setdefault("ssh_key_path", os.path.join(project_dir, "ssh_key.pub"))
     config.setdefault("nbd", "nbd0")
+    config.setdefault("vm_name", "basebox" + config["project_key"])
 
 def find_config_path(on_not_found=on_error_raise):
     basename = "basebox.json"
@@ -209,9 +292,10 @@ def find_config_path(on_not_found=on_error_raise):
 def main(argv):
     parser = optparse.OptionParser(__doc__)
     parser.add_option("--tear-down", dest="tear_down_dir")
+    parser.allow_interspersed_args = False
     options, args = parser.parse_args(argv)
-    if len(args) > 0:
-        parser.error("Unexpected: %r" % (args,))
+    if len(args) == 0:
+        args = ["bash"]
     if options.tear_down_dir is not None:
         force_rm(options.tear_down_dir)
         return
@@ -221,7 +305,7 @@ def main(argv):
     config.setdefault("cwd", os.path.abspath("."))
     config.setdefault("home", os.path.abspath(os.path.expanduser("~")))
     expand_config(config)
-    basebox(config)
+    basebox(config, args)
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))
