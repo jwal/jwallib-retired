@@ -106,7 +106,7 @@ def get_ssh_argv(config):
             "-t",
             "-q",
             "-oUserKnownHostsFile=" + config["host_key_path"] + ".known",
-            "root@192.168.122.200"]
+            "sysadmin@192.168.122.200"]
 
 def basebox(config, argv):
 
@@ -176,6 +176,14 @@ def basebox(config, argv):
               "language-pack-en"], stdout=None)
         call(["sudo", "chroot", mnt_path, "apt-get", "install", "--yes",
               "openssh-server"], stdout=None)
+        call(["sudo", "chroot", mnt_path, "adduser", "--gecos", "", 
+              "--disabled-password", "--uid", "1000", "sysadmin"], stdout=None)
+        call(["sudo", "mv", os.path.join(mnt_path, "home", "sysadmin"), 
+              os.path.join(config["project_dir"], "home")])
+        call(["sudo", "chroot", mnt_path, "adduser", "sysadmin", 
+              "adm"], stdout=None)
+        call(["sudo", "chroot", mnt_path, "adduser", "sysadmin", 
+              "sudo"], stdout=None)
         call(["sudo", "chroot", mnt_path, "bash", "-c", 
               "rm -rf /etc/ssh/ssh_host_*"])
         call(["sudo", "chroot", mnt_path, "dpkg-reconfigure", 
@@ -187,10 +195,16 @@ def basebox(config, argv):
               config["host_key_path"], config["host_key_path"] + ".known"])
         force_rm(config["ssh_key_path"])
         call(["ssh-keygen", "-P", "", "-f", config["ssh_key_path"]])
-        ak_path = os.path.join(mnt_path, "root", ".ssh", "authorized_keys")
-        call(["sudo", "mkdir", "-p", os.path.dirname(ak_path)])
-        force_rm(ak_path)
-        call(["sudo", "cp", config["ssh_key_path"] + ".pub", ak_path])
+        for home_path in [os.path.join(mnt_path, "root"),
+                          os.path.join(config["project_dir"], "home")]:
+            
+            ak_path = os.path.join(home_path, ".ssh", "authorized_keys")
+            call(["sudo", "mkdir", "-p", os.path.dirname(ak_path)])
+            force_rm(ak_path)
+            call(["sudo", "cp", config["ssh_key_path"] + ".pub", ak_path])
+            if os.path.basename(home_path) != "root":
+                call(["sudo", "chown", "-R", "1000:1000", 
+                      os.path.dirname(ak_path)])
         call(["sudo", "bash", "-c", 'echo "$1" > "$2"', "-",
               """\
 auto lo
@@ -204,6 +218,10 @@ iface eth0 inet static
   gateway 192.168.122.1
   dns-nameservers 192.168.122.1
 """, os.path.join(mnt_path, "etc", "network", "interfaces")])
+        call(["sudo", "bash", "-c", 'echo "$1" > "$2"', "-",
+              """\
+%sudo ALL=(ALL:ALL) NOPASSWD: ALL
+""", os.path.join(mnt_path, "etc", "sudoers.d", "sudo-nopasswd")])
         #### Run chef here?
         force_rm(mnt_path)
         call(["mv", config["img_path"] + ".tmp", config["img_path"]])
@@ -221,6 +239,13 @@ iface eth0 inet static
         force_rm(mnt_path)
         call(["mkdir", "-p", mnt_path])
         call(["sudo", "mount", nbd_path + "p1", mnt_path])
+        home_rw = os.path.join(config["project_dir"], "home")
+        home_mnt = os.path.join(mnt_path, "home", "sysadmin")
+        force_rm(home_mnt)
+        call(["sudo", "mkdir", "-p", home_mnt])
+        call(["sudo", "mount", "-t", "aufs", 
+              "-o", "br=%s=rw:%s=ro" % (home_rw, config["project_path"]),
+              "none", home_mnt])
         call(["virsh", "--connect", "lxc://", "destroy", config["vm_name"]],
              do_check=False)
         while True:
