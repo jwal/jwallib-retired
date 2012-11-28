@@ -99,6 +99,15 @@ def get_vm_state(vm_name, on_no_state=on_error_raise):
         return state
     return on_no_state("No state found for vm: %s" % (vm_name,))
 
+def get_ssh_argv(config):
+    return ["ssh", "-i", config["ssh_key_path"],
+            "-oHostKeyAlias=basebox", 
+            "-oHashKnownHosts=no",
+            "-t",
+            "-q",
+            "-oUserKnownHostsFile=" + config["host_key_path"] + ".known",
+            "root@192.168.122.200"]
+
 def basebox(config, argv):
 
     def flush_cache():
@@ -161,6 +170,8 @@ def basebox(config, argv):
         force_rm(resolvconf)
         call(["sudo", "cp", "/etc/resolv.conf", resolvconf])
         call(["sudo", "chroot", mnt_path, "apt-get", "update"], stdout=None)
+        call(["sudo", "chroot", mnt_path, "apt-get", "remove", "--yes",
+              "cloud-init"], stdout=None)
         call(["sudo", "chroot", mnt_path, "apt-get", "install", "--yes",
               "language-pack-en"], stdout=None)
         call(["sudo", "chroot", mnt_path, "apt-get", "install", "--yes",
@@ -196,6 +207,7 @@ iface eth0 inet static
         #### Run chef here?
         force_rm(mnt_path)
         call(["mv", config["img_path"] + ".tmp", config["img_path"]])
+    ssh_argv = get_ssh_argv(config)
     if get_vm_state(config["vm_name"], on_no_state=lambda m: None) != "running":
         call(["qemu-img", "create", "-f", "qcow2", "-o", 
               "backing_file=" + config["img_path"], 
@@ -256,14 +268,7 @@ iface eth0 inet static
               lxml.etree.tostring(xml), xml_path])
         call(["virsh", "--connect", "lxc://", "define", xml_path])
         call(["virsh", "--connect", "lxc://", "start", config["vm_name"]])
-    ssh_argv = ["ssh", "-i", config["ssh_key_path"],
-                "-oHostKeyAlias=basebox", 
-                "-oHashKnownHosts=no",
-                "-t",
-                "-q",
-                "-oUserKnownHostsFile=" + config["host_key_path"] + ".known",
-                "root@192.168.122.200"]
-    # print "~~~", " ".join(shell_escape(a) for a in ssh_argv)
+        print "~~~", " ".join(shell_escape(a) for a in ssh_argv)
     while True:
         rc = []
         call_no_print(ssh_argv + ["true"], do_check=False, handle_rc=rc.append)
@@ -273,7 +278,6 @@ iface eth0 inet static
         time.sleep(0.1)
     exec_argv = ssh_argv + [" ".join(shell_escape(a) for a in argv)]
     os.execvp(exec_argv[0], exec_argv)
-    
 
 def expand_config(config):
     config.setdefault("system_root", os.path.join(config["home"], ".basebox"))
@@ -326,6 +330,8 @@ def main(argv):
     parser.add_option("--tear-down", dest="tear_down_dir")
     parser.add_option("--show-config", dest="do_show_config",
                       action="store_const", const=True, default=False)
+    parser.add_option("--show-ssh-cmd", dest="do_show_ssh_cmd",
+                      action="store_const", const=True, default=False)
     parser.allow_interspersed_args = False
     options, args = parser.parse_args(argv)
     if len(args) == 0:
@@ -341,6 +347,10 @@ def main(argv):
     expand_config(config)
     if options.do_show_config:
         print json.dumps(config, indent=2, sort_keys=True)
+        return
+    if options.do_show_ssh_cmd:
+        ssh_argv = get_ssh_argv(config)
+        print "~~~", " ".join(shell_escape(a) for a in ssh_argv)
         return
     basebox(config, args)
 
