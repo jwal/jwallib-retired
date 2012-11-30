@@ -230,16 +230,25 @@ iface eth0 inet static
         call(["qemu-img", "create", "-f", "qcow2", "-o", 
               "backing_file=" + config["img_path"], 
               config["img_path"] + ".tmp"])
+        root_rw_path = os.path.join(config["project_dir"], "root-rw")
+        call(["sudo", "mkdir", "-p", root_rw_path])
         call(["sudo", "modprobe", "nbd"])
         nbd_path = os.path.join("/dev", config["nbd"])
         call(["sudo", "qemu-nbd", "--disconnect", nbd_path])
         call(["sudo", "qemu-nbd", "--connect", nbd_path, 
               config["img_path"] + ".tmp"])
+        img_mnt_path = os.path.join(config["project_dir"], "img-mnt")
         mnt_path = config["mnt_path"]
+        force_rm(img_mnt_path)
         force_rm(mnt_path)
         call(["mkdir", "-p", mnt_path])
-        call(["sudo", "mount", nbd_path + "p1", mnt_path])
+        call(["mkdir", "-p", img_mnt_path])
+        call(["sudo", "mount", nbd_path + "p1", img_mnt_path])
+        call(["sudo", "mount", "-t", "aufs", 
+              "-o", "br=%s=rw:%s=ro" % (root_rw_path, img_mnt_path),
+              "none", mnt_path])
         home_rw = os.path.join(config["project_dir"], "home")
+        call(["mkdir", "-p", home_rw])
         home_mnt = os.path.join(mnt_path, "home", "sysadmin")
         force_rm(home_mnt)
         call(["sudo", "mkdir", "-p", home_mnt])
