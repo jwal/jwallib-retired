@@ -118,49 +118,17 @@ def basebox(config, argv):
                 fh.write(json.dumps(config["project_cache"]))
 
     flush_cache()
-    sha1sum = config["base_image"].get("sha1sum")
-    if sha1sum is None:
-        sha1sum = config["project_cache"].get("base_image_sha1sum")
-    objpath = None
-    if sha1sum is not None:
-        objpath = os.path.join(config["objcache"], sha1sum)
-        if not os.path.exists(objpath):
-            objpath = None
-    if objpath is None:
-        call(["mkdir", "-p", config["tmp"]])
-        tmp_path = tempfile.mkdtemp(dir=config["tmp"])
-        try:
-            tmp_img = os.path.join(tmp_path, "download")
-            call(["wget", "-O", tmp_img, config["base_image"]["url"]],
-                 stdout=None)
-            tmp_sha1sum = call(["sha1sum", tmp_img]).split()[0]
-            if sha1sum is not None and sha1sum != tmp_sha1sum:
-                raise Exception("Checksum mismatch:\n"
-                                "  url %r\n"
-                                "  expected %r\n"
-                                "  got %r" % (config["base_image"]["url"],
-                                              sha1sum, tmp_sha1sum))
-            objpath = os.path.join(config["objcache"], tmp_sha1sum)
-            call(["chmod", "a-wx", tmp_img])
-            call(["mkdir", "-p", os.path.dirname(objpath)])
-            call(["mv", tmp_img, objpath])
-            config["project_cache"]["base_image_sha1sum"] = tmp_sha1sum
-        finally:
-            shutil.rmtree(tmp_path)
+    root_path = os.path.join(config["project_dir"], "root")
     flush_cache()
-    if not os.path.exists(config["img_path"]):
-        call(["rm", "-f", config["img_path"]])
-        call(["qemu-img", "create", "-f", "qcow2", "-o", 
-              "backing_file=" + objpath, config["img_path"] + ".tmp"])
-        call(["sudo", "modprobe", "nbd"])
-        nbd_path = os.path.join("/dev", config["nbd"])
-        call(["sudo", "qemu-nbd", "--disconnect", nbd_path])
-        call(["sudo", "qemu-nbd", "--connect", nbd_path, 
-              config["img_path"] + ".tmp"])
+    if not os.path.exists(root_path):
+        force_rm(root_path)
         mnt_path = config["mnt_path"]
         force_rm(mnt_path)
+        call(["mkdir", "-p", root_path])
         call(["mkdir", "-p", mnt_path])
-        call(["sudo", "mount", nbd_path + "p1", mnt_path])
+        call(["sudo", "mount", "--bind", root_path, mnt_path])
+        call(["sudo", "debootstrap", "quantal", mnt_path], 
+             stdout=None, stderr=None, stdin=None)
         for relpath in ["proc", "dev", "dev/pts", "sys"]:
             src = os.path.join("/", relpath)
             dst = os.path.join(mnt_path, relpath)
@@ -227,34 +195,15 @@ iface eth0 inet static
         call(["mv", config["img_path"] + ".tmp", config["img_path"]])
     ssh_argv = get_ssh_argv(config)
     if get_vm_state(config["vm_name"], on_no_state=lambda m: None) != "running":
-        call(["qemu-img", "create", "-f", "qcow2", "-o", 
-              "backing_file=" + config["img_path"], 
-              config["img_path"] + ".tmp"])
-        root_rw_path = os.path.join(config["project_dir"], "root-rw")
-        call(["sudo", "mkdir", "-p", root_rw_path])
-        call(["sudo", "modprobe", "nbd"])
-        nbd_path = os.path.join("/dev", config["nbd"])
-        call(["sudo", "qemu-nbd", "--disconnect", nbd_path])
-        call(["sudo", "qemu-nbd", "--connect", nbd_path, 
-              config["img_path"] + ".tmp"])
-        img_mnt_path = os.path.join(config["project_dir"], "img-mnt")
         mnt_path = config["mnt_path"]
-        force_rm(img_mnt_path)
         force_rm(mnt_path)
         call(["mkdir", "-p", mnt_path])
-        call(["mkdir", "-p", img_mnt_path])
-        call(["sudo", "mount", nbd_path + "p1", img_mnt_path])
-        call(["sudo", "mount", "-t", "aufs", 
-              "-o", "br=%s=rw:%s=ro" % (root_rw_path, img_mnt_path),
-              "none", mnt_path])
         home_rw = os.path.join(config["project_dir"], "home")
         call(["mkdir", "-p", home_rw])
         home_mnt = os.path.join(mnt_path, "home", "sysadmin")
         force_rm(home_mnt)
         call(["sudo", "mkdir", "-p", home_mnt])
-        call(["sudo", "mount", "-t", "aufs", 
-              "-o", "br=%s=rw:%s=ro" % (home_rw, config["project_path"]),
-              "none", home_mnt])
+        call(["sudo", "mount", "--bind", home_rw, home_mnt])
         call(["virsh", "--connect", "lxc://", "destroy", config["vm_name"]],
              do_check=False)
         while True:
