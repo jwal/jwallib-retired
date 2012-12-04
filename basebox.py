@@ -192,12 +192,12 @@ iface eth0 inet static
 """, os.path.join(mnt_path, "etc", "sudoers.d", "sudo-nopasswd")])
         #### Run chef here?
         force_rm(mnt_path)
-        call(["mv", config["img_path"] + ".tmp", config["img_path"]])
     ssh_argv = get_ssh_argv(config)
     if get_vm_state(config["vm_name"], on_no_state=lambda m: None) != "running":
         mnt_path = config["mnt_path"]
         force_rm(mnt_path)
         call(["mkdir", "-p", mnt_path])
+        call(["sudo", "mount", "--bind", root_path, mnt_path])
         home_rw = os.path.join(config["project_dir"], "home")
         call(["mkdir", "-p", home_rw])
         home_mnt = os.path.join(mnt_path, "home", "sysadmin")
