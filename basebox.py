@@ -108,7 +108,7 @@ def get_ssh_argv(config):
             "-oUserKnownHostsFile=" + config["host_key_path"] + ".known",
             "sysadmin@192.168.122.200"]
 
-def basebox(config, argv):
+def prepare(config):
 
     def flush_cache():
         if config["do_write_project_cache"]:
@@ -127,7 +127,7 @@ def basebox(config, argv):
         call(["mkdir", "-p", root_path])
         call(["mkdir", "-p", mnt_path])
         call(["sudo", "mount", "--bind", root_path, mnt_path])
-        call(["sudo", "debootstrap", "quantal", mnt_path], 
+        call(["sudo", "debootstrap", config["ubuntu-codename"], mnt_path], 
              stdout=None, stderr=None, stdin=None)
         for relpath in ["proc", "dev", "dev/pts", "sys"]:
             src = os.path.join("/", relpath)
@@ -186,10 +186,13 @@ iface eth0 inet static
   gateway 192.168.122.1
   dns-nameservers 192.168.122.1
 """, os.path.join(mnt_path, "etc", "network", "interfaces")])
+        nopasswd_path = os.path.join(
+            mnt_path, "etc", "sudoers.d", "sudo-nopasswd")
         call(["sudo", "bash", "-c", 'echo "$1" > "$2"', "-",
               """\
 %sudo ALL=(ALL:ALL) NOPASSWD: ALL
-""", os.path.join(mnt_path, "etc", "sudoers.d", "sudo-nopasswd")])
+""", nopasswd_path])
+        call(["sudo", "chmod", "0440", nopasswd_path])
         #### Run chef here?
         force_rm(mnt_path)
     ssh_argv = get_ssh_argv(config)
@@ -259,6 +262,10 @@ iface eth0 inet static
         if rc == 0:
             break
         time.sleep(0.1)
+
+def basebox(config, argv):
+    prepare(config)
+    ssh_argv = get_ssh_argv(config)
     exec_argv = ssh_argv + [" ".join(shell_escape(a) for a in argv)]
     os.execvp(exec_argv[0], exec_argv)
 
@@ -294,6 +301,7 @@ def expand_config(config):
     config.setdefault("ssh_key_path", os.path.join(project_dir, "ssh_key"))
     config.setdefault("nbd", "nbd0")
     config.setdefault("vm_name", "basebox" + config["project_key"])
+    config.setdefault("ubuntu-codename", "quantal")
 
 def find_config_path(on_not_found=on_error_raise):
     basename = "basebox.json"
