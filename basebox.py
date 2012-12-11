@@ -1,4 +1,4 @@
-# Copyright 2011 James Ascroft-Leigh
+# Copyright 2012 James Ascroft-Leigh
 
 """\
 %prog [options]
@@ -8,16 +8,18 @@ A bit like Vagrant.
 
 from jwalutil import on_error_raise
 from jwalutil import read_file
-import json
-import optparse
-import os
-import sys
 from process import call as call_no_print
 from process import shell_escape
-import tempfile
-import shutil
+import aptconfig
+import copy
 import hashlib
+import json
 import lxml.etree
+import optparse
+import os
+import shutil
+import sys
+import tempfile
 import time
 
 call = lambda *a, **kw: call_no_print(
@@ -134,9 +136,18 @@ def prepare(config):
             dst = os.path.join(mnt_path, relpath)
             call(["sudo", "mkdir", "-p", dst])
             call(["sudo", "mount", "--bind", src, dst])
-        resolvconf = os.path.join(mnt_path, "etc/resolv.conf")
+        resolvconf = os.path.join(mnt_path, "run/resolvconf/resolv.conf")
         force_rm(resolvconf)
         call(["sudo", "cp", "/etc/resolv.conf", resolvconf])
+        call(["sudo", "bash", "-c", 'echo "$1" > "$2"', "-", 
+              aptconfig.BLANK_SOURCES, 
+              os.path.join(mnt_path, "etc/apt/sources.list")])
+        base_sources_config = copy.deepcopy(aptconfig.DEFAULT_CONFIG)
+        base_sources_config["distribution"] = config["ubuntu-codename"]
+        base_sources = aptconfig.render_to_sources_list(base_sources_config)
+        call(["sudo", "bash", "-c", 'echo "$1" > "$2"', "-", 
+              base_sources, 
+              os.path.join(mnt_path, "etc/apt/sources.list.d/base.list")])
         call(["sudo", "chroot", mnt_path, "apt-get", "update"], stdout=None)
         call(["sudo", "chroot", mnt_path, "apt-get", "remove", "--yes",
               "cloud-init"], stdout=None)

@@ -67,6 +67,10 @@ def render_to_sources_list(config):
     assert len(results) == len(set(results)), results
     return message + header + body
 
+BLANK_SOURCES = """\
+## File intentionally blank; see /etc/apt/sources.list.d/*.list\r\n\
+"""
+
 def main(argv):
     parser = optparse.OptionParser(__doc__)
     parser.add_option("--install", dest="do_install",
@@ -103,9 +107,7 @@ def main(argv):
         file_data = {
             "/etc/apt/sources.list.d/%s.list" % (options.basename,): output}
         if options.do_blank:
-            file_data["/etc/apt/sources.list"] = """\
-## File intentionally blank; see /etc/apt/sources.list.d/*.list\r\n\
-"""
+            file_data["/etc/apt/sources.list"] = BLANK_SOURCES
         if options.do_proxy_install:
             if options.proxy is None:
                 proxy_data = "# No proxy\r\n"
