@@ -101,14 +101,17 @@ def get_vm_state(vm_name, on_no_state=on_error_raise):
         return state
     return on_no_state("No state found for vm: %s" % (vm_name,))
 
-def get_ssh_argv(config):
+def get_ssh_argv(config, argv=()):
     return ["ssh", "-i", config["ssh_key_path"],
-            "-oHostKeyAlias=basebox", 
-            "-oHashKnownHosts=no",
-            "-t",
+            "-o", "HostKeyAlias=basebox", 
+            "-o", "HashKnownHosts=no",
+            "-o", "BatchMode=yes",
+            # "-t",
+            "-o", "ServerAliveInterval=20",
             "-q",
-            "-oUserKnownHostsFile=" + config["host_key_path"] + ".known",
-            "sysadmin@192.168.122.200"]
+            "-o", "UserKnownHostsFile=" + config["host_key_path"] + ".known",
+            "sysadmin@192.168.122.200"] + [
+        " ".join(shell_escape(a) for a in argv)]
 
 def prepare(config):
 
@@ -206,7 +209,6 @@ iface eth0 inet static
         call(["sudo", "chmod", "0440", nopasswd_path])
         #### Run chef here?
         force_rm(mnt_path)
-    ssh_argv = get_ssh_argv(config)
     if get_vm_state(config["vm_name"], on_no_state=lambda m: None) != "running":
         mnt_path = config["mnt_path"]
         force_rm(mnt_path)
@@ -265,10 +267,11 @@ iface eth0 inet static
               lxml.etree.tostring(xml), xml_path])
         call(["virsh", "--connect", "lxc://", "define", xml_path])
         call(["virsh", "--connect", "lxc://", "start", config["vm_name"]])
-        print "~~~", " ".join(shell_escape(a) for a in ssh_argv)
+        print "~~~", " ".join(shell_escape(a) for a in get_ssh_argv(config))
     while True:
         rc = []
-        call_no_print(ssh_argv + ["true"], do_check=False, handle_rc=rc.append)
+        call_no_print(get_ssh_argv(config, ["true"]), 
+                      do_check=False, handle_rc=rc.append)
         rc = rc[0]
         if rc == 0:
             break
@@ -276,8 +279,7 @@ iface eth0 inet static
 
 def basebox(config, argv):
     prepare(config)
-    ssh_argv = get_ssh_argv(config)
-    exec_argv = ssh_argv + [" ".join(shell_escape(a) for a in argv)]
+    exec_argv = get_ssh_argv(config, argv)
     os.execvp(exec_argv[0], exec_argv)
 
 def expand_config(config):

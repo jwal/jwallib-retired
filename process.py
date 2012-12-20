@@ -7,10 +7,12 @@ import subprocess
 
 def call(argv, **kwargs):
     do_print = kwargs.pop("do_print", False)
+    stdin_data = kwargs.pop("stdin_data", "")
     if do_print:
         print "~~~", " ".join(shell_escape(a) for a in argv)
     do_wait = kwargs.pop("do_wait", True)
     handle_rc = kwargs.pop("handle_rc", lambda rc: None)
+    kwargs.setdefault("stdin", subprocess.PIPE)
     kwargs.setdefault("stdout", subprocess.PIPE)
     kwargs.setdefault("stderr", subprocess.STDOUT)
     rc = kwargs.pop("check_rc", 0)
@@ -21,7 +23,7 @@ def call(argv, **kwargs):
     except Exception, e:
         raise Exception("Failed to spawn child process %r: %s" % (argv, e))
     if do_wait:
-        stdout, stderr = child.communicate()
+        stdout, stderr = child.communicate(stdin_data)
         handle_rc(child.returncode)
         if do_check:
             if child.returncode != rc:
