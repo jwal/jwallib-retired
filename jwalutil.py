@@ -4,6 +4,8 @@
 from __future__ import with_statement
 
 import contextlib
+import datetime
+import re
 import shutil
 import string
 import tempfile
@@ -223,7 +225,48 @@ def on_error_raise(message):
 # exceptions?
 def on_error_return_none(message):
     return None
-
+    
+    
+### Parsing ISO8601 timestamps
+ISO8601 = re.compile("""\
+^(?P<yearsign>[+-]?)
+(?P<year>\d+)
+((?P<yearmonthsep>[-]?)
+ (?P<month>\d{2})
+ ((?P<monthdaysep>[-]?)
+  (?P<day>\d{2})
+  ((?P<datetimesep>[T ]?)
+   (?P<hour>\d{2})
+   ((?P<hourminutesep>[:]?)
+    (?P<minute>\d{2})
+    ((?P<minutesecondsep>[:]?)
+     (?P<second>\d{2})
+     ((?P<secondpointsep>[,.]?)(?P<secondpoint>\d+))?
+     ((?P<specialoffset>[Z])
+     |((?P<offsetsign>[+-])(?P<offsethour>\d{2})
+     (?P<offsersep>[:]?)(?P<offsetminute>\d{2}?)
+))?)?)?)?)?)?$
+""",
+                     re.VERBOSE)
+def parse_iso8601_to_utc_seconds(timestamp):
+    match = ISO8601.match(timestamp)
+    if match is None:
+        raise Exception("Unable to parse: %s" % (timestamp,))
+    parsed = match.groupdict()
+    if parsed["specialoffset"] == "Z":
+        offset = datetime.timedelta(seconds=0)
+    else:
+        offsetminute = (0 if not parsed["offsetminute"] 
+                        else int(parsed["offsetminute"]))
+        offsethour = int(parsed["offsethour"])
+        offsetsign = {"+": 1, "-": -1}[parsed["offsetsign"]]
+        offset = offsetsign * datetime.timedelta(
+            hours=offsethour, minutes=offsetminute)
+    base = datetime.datetime(
+        *[int(parsed[a]) for a in
+          ["year", "month", "day", "hour", "minute", "second"]])
+    return base - offset
+        
 
 # Copyright 2011 James Ascroft-Leigh
 
