@@ -78,7 +78,11 @@ def write_file(path, data):
 # U+000A to be consistent with Internet standards such as HTTP.  In
 # practise many invocations of this will need to override the line
 # terminator to be `\n`.
-def read_lines(data, line_terminator="\r\n"):
+def read_lines(data, line_terminator=None):
+    if "\r\n" in data:
+        line_terminator = "\r\n"
+    else:
+        line_terminator = "\n"
     result = []
     i = 0
     while True:

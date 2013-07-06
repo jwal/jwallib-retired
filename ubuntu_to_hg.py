@@ -12,6 +12,8 @@ import email
 import apt_pkg
 from cStringIO import StringIO
 from jwalutil import mkdtemp
+from jwalutil import get1
+from jwalutil import read_file
 from jwalutil import write_file
 from jwalutil import read_lines
 from jwalutil import group_by
@@ -54,6 +56,14 @@ def with_ubuntu_keyring():
             gpg(["--import", keyring_path])
         yield gpg
 
+def get_release_sha1sums(release_data):
+    sha1sums = {}
+    release = get1(parse_control_file(release_data))
+    for line in read_lines(release["SHA1"] + "\n"):
+        sha1sum, size, relpath = line.split()
+        sha1sums[relpath] = sha1sum
+    return sha1sums
+
 def ubuntu_to_hg(hg_path):
 
     def hg(argv, **kwargs):
@@ -82,20 +92,33 @@ def ubuntu_to_hg(hg_path):
             try:
                 if branch not in branches:
                     hg(["update", "--clean", "default"])
-                    hg(["branch", branch])
+                    hg(["branch", "--force", branch])
                 else:
                     hg(["update", "--clean", branch])
                 try:
                     hg(["merge", "default"])
                 except Exception:
                     pass
-                release_data = get(release["Release-File"]).text
                 release_path = os.path.join(hg_path, "Release")
+                old_sha1sums = {}
+                if os.path.exists(release_path):
+                    old_sha1sums = get_release_sha1sums(read_file(release_path))
+                release_data = get(release["Release-File"]).text
+                new_sha1sums = get_release_sha1sums(release_data)
                 write_file(release_path, release_data)
                 release_gpg_data = get(release["Release-File"] + ".gpg").text
                 release_gpg_path = os.path.join(hg_path, "Release.gpg")
                 write_file(release_gpg_path, release_gpg_data)
                 gpg(["--verify", release_gpg_path, release_path])
+                for relpath in old_sha1sums:
+                    if relpath in new_sha1sums:
+                        continue
+                    # Delete file
+                for relpath in new_sha1sums:
+                    if relpath in old_sha1sums:
+                        if new_sha1sums[relpath] == old_sha1sums[relpath]:
+                            continue
+                    # Fetch file and check sha1sum
                 hg(["addremove"])
                 if len(read_lines(hg(["status"]))) > 0:
                     hg(["commit", "-m", "Update from upstream"])
