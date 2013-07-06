@@ -61,6 +61,10 @@ def read_file(path):
     with open(path, "rb") as fh:
         return fh.read().decode("utf-8")
 
+def write_file(path, data):
+    with open(path, "wb") as fh:
+        return fh.write(data.encode("utf-8"))
+
 ### Read lines
 #
 # Most well-bahaved command line programs emit their output as a
