@@ -27,6 +27,11 @@ import hashlib
 
 BASE_URL = "http://changelogs.ubuntu.com/"
 
+PORTS_MIRRORS = (
+    ("http://archive.ubuntu.com/ubuntu/", 
+     "http://ports.ubuntu.com/ubuntu-ports/"),
+)
+
 def parse_control_file(data):
     result = []
     with mkdtemp() as temp_dir:
@@ -44,9 +49,42 @@ def get(*args, **kwargs):
     try:
         result.raise_for_status()
     except Exception, e:
-        print get, args, kwargs
+        #print get, args, kwargs
         raise
     return result
+
+
+def get_release_file(base_url):
+    for src, dst in [("", "")] + list(PORTS_MIRRORS):
+        url = base_url
+        if url.startswith(src):
+            url = dst + trim(url, prefix=src)
+        try:
+            file_data = get(url).content
+        except Exception, e:
+            try:
+                file_data_bz2 = get(url + ".bz2").content
+            except Exception, e:
+                try:
+                    file_data_gz = get(url + ".gz").content
+                except Exception, e:
+                    continue
+                else:
+                    file_data = call(["gunzip"], 
+                                     stdin_data=file_data_bz2,
+                                     do_crlf_fix=False)
+            else:
+                file_data = call(["bzip2", "-d"], 
+                                 stdin_data=file_data_bz2,
+                                 do_crlf_fix=False)
+                break
+        else:
+            break
+    else:
+        raise Exception("Failed to fetch %r including gz and "
+                        "bz2 variants and ports mirror"
+                        % (base_url,))
+    return file_data
 
 @contextlib.contextmanager
 def with_ubuntu_keyring():
@@ -97,7 +135,7 @@ def ubuntu_to_hg(hg_path):
         ok_branches = set()
         seen_supported_non_lts = False
         for release in meta_release:
-            branch = "ubuntu_%s" % (release["Dist"],)
+            branch = "ubuntu_codename_%s" % (release["Dist"],)
             is_lts = "LTS" in release["Version"]
             is_supported = release["Supported"] == "1"
             if is_supported and not is_lts:
@@ -146,27 +184,9 @@ def ubuntu_to_hg(hg_path):
                         and trim(relpath, suffix=".bz2") in new_sha1sums):
                     continue
                 file_path = os.path.join(hg_path, relpath)
-                url = posixpath.join(
-                    posixpath.dirname(release["Release-File"]), relpath)
-                try:
-                    file_data = get(url).content
-                except Exception, e:
-                    try:
-                        file_data_bz2 = get(url + ".bz2").content
-                    except Exception, e:
-                        try:
-                            file_data_gz = get(url + ".gz").content
-                        except Exception, e:
-                            print "  Failed", relpath
-                            continue
-                        else:
-                            file_data = call(["gunzip"], 
-                                             stdin_data=file_data_bz2,
-                                             do_crlf_fix=False)
-                    else:
-                        file_data = call(["bzip2", "-d"], 
-                                         stdin_data=file_data_bz2,
-                                         do_crlf_fix=False)
+                file_data = get_release_file(
+                    posixpath.join(
+                        posixpath.dirname(release["Release-File"]), relpath))
                 sha1sum = hashlib.sha1(file_data).hexdigest()
                 if sha1sum != new_sha1sums[relpath]:
                     raise Exception("sha1sum mismatch for %r: "
