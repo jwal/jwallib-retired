@@ -109,12 +109,15 @@ def get_release_sha1sums(release_data):
         sha1sums[relpath] = sha1sum
     return sha1sums
 
-def ubuntu_to_hg(hg_path):
+def ubuntu_to_hg(hg_path, username):
 
     def hg(argv, **kwargs):
         kwargs.setdefault("cwd", hg_path)
         kwargs.setdefault("do_print", True)
-        return call(["hg"] + argv, **kwargs)
+        prefix = ["hg"]
+        if username is not None and argv[0] in ("commit", "ci"):
+            prefix.extend(["--config", "ui.username=%s" % (username,)])
+        return call(prefix + argv, **kwargs)
 
     with with_ubuntu_keyring() as gpg:
         meta_release_data = get(
@@ -125,13 +128,6 @@ def ubuntu_to_hg(hg_path):
             os.makedirs(hg_path)
             hg(["init"])
         branches = set([a.split()[0] for a in read_lines(hg(["branches"]))])
-        if "default" in branches:
-            hg(["update", "--clean", "default"])
-        meta_release_path = os.path.join(hg_path, "meta-release")
-        write_file(meta_release_path, meta_release_data)
-        hg(["addremove"])
-        if len(read_lines(hg(["status"]))) > 0:
-            hg(["commit", "-m", "Update from upstream"])
         ok_branches = set()
         seen_supported_non_lts = False
         for release in meta_release:
@@ -141,22 +137,15 @@ def ubuntu_to_hg(hg_path):
             if is_supported and not is_lts:
                 seen_supported_non_lts = True
             is_development = not is_supported and seen_supported_non_lts
-            # print "  branch", branch
-            # print "    is_supported", is_supported
-            # print "    is_lts", is_lts
-            # print "    is_development", is_development
             if not is_supported and not is_development:
                 continue
             ok_branches.add(branch)
             if branch not in branches:
-                hg(["update", "--clean", "default"])
+                hg(["update", "--clean", "--rev", "00"])
                 hg(["branch", "--force", branch])
             else:
                 hg(["update", "--clean", branch])
-            try:
-                hg(["merge", "default"])
-            except Exception:
-                pass
+            hg(["--config", "extensions.purge=", "purge", "--all"])
             release_path = os.path.join(hg_path, "Release")
             old_sha1sums = {}
             if os.path.exists(release_path):
@@ -209,11 +198,12 @@ def ubuntu_to_hg(hg_path):
 def main(argv):
     parser = optparse.OptionParser(__doc__)
     parser.add_option("--hg", dest="hg_path", default="ubuntuhg")
+    parser.add_option("--username", dest="username")
     options, args = parser.parse_args(argv)
     if len(args) > 0:
         parser.error("Unexpected: %r" % (args,))
     hg_path = os.path.abspath(options.hg_path)
-    ubuntu_to_hg(hg_path)
+    ubuntu_to_hg(hg_path, username=options.username)
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))
