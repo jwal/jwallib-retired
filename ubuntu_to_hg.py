@@ -160,14 +160,14 @@ def ubuntu_to_hg(hg_path, username):
                     release_data).hexdigest()
                 old_sha1sums["Release.gpg"] = hashlib.sha1(
                     release_gpg_data).hexdigest()
-                for relpath in sorted(old_sha1sums):
-                    if posixpath.dirname(relpath) == "Index":
-                        index_data = read_file(os.path.join(hg_path, relpath))
-                        child_sha1sums = get_release_sha1sums(index_data)
-                        for relpath2 in sorted(child_sha1sums):
-                            relpath3 = posixpath.join(
-                                posixpath.dirname(relpath), relpath2)
-                            old_sha1sums[relpath3] = child_sha1sums[relpath2]
+                # for relpath in sorted(old_sha1sums):
+                #     if posixpath.dirname(relpath) == "Index":
+                #         index_data = read_file(os.path.join(hg_path, relpath))
+                #         child_sha1sums = get_release_sha1sums(index_data)
+                #         for relpath2 in sorted(child_sha1sums):
+                #             relpath3 = posixpath.join(
+                #                 posixpath.dirname(relpath), relpath2)
+                #             old_sha1sums[relpath3] = child_sha1sums[relpath2]
             release_data = get(release["Release-File"]).content
             with open(release_gpg_path, "wb") as fh:
                 fh.write(release_gpg_data)
@@ -181,32 +181,32 @@ def ubuntu_to_hg(hg_path, username):
                 release_gpg_data).hexdigest()
             new_sha1sums["Release"] = hashlib.sha1(
                 release_data).hexdigest()
-            for relpath in sorted(new_sha1sums):
-                if posixpath.basename(relpath) == "Index":
-                    if new_sha1sums[relpath] == old_sha1sums.get(relpath):
-                        index_data = read_file(os.path.join(hg_path, relpath))
-                    else:
-                        index_data = get(
-                            posixpath.join(
-                                posixpath.dirname(release["Release-File"]),
-                                relpath)).content
-                        sha1sum = hashlib.sha1(index_data).hexdigest()
-                        if sha1sum != new_sha1sums[relpath]:
-                            raise Exception("sha1sum mismatch for %r: "
-                                            "got %s expecting %s"
-                                            % (url, sha1sum, 
-                                               new_sha1sums[relpath]))
-                        index_path = os.path.join(hg_path, relpath)
-                        if not os.path.exists(os.path.dirname(index_path)):
-                            os.makedirs(os.path.dirname(index_path))
-                        with open(index_path, "wb") as fh:
-                            fh.write(index_data)
-                    done.add(relpath)
-                    child_sha1sums = get_release_sha1sums(index_data)
-                    for relpath2 in sorted(child_sha1sums):
-                        relpath3 = posixpath.join(
-                            posixpath.dirname(relpath), relpath2)
-                        new_sha1sums[relpath3] = child_sha1sums[relpath2]
+            # for relpath in sorted(new_sha1sums):
+            #     if posixpath.basename(relpath) == "Index":
+            #         if new_sha1sums[relpath] == old_sha1sums.get(relpath):
+            #             index_data = read_file(os.path.join(hg_path, relpath))
+            #         else:
+            #             index_data = get(
+            #                 posixpath.join(
+            #                     posixpath.dirname(release["Release-File"]),
+            #                     relpath)).content
+            #             sha1sum = hashlib.sha1(index_data).hexdigest()
+            #             if sha1sum != new_sha1sums[relpath]:
+            #                 raise Exception("sha1sum mismatch for %r: "
+            #                                 "got %s expecting %s"
+            #                                 % (url, sha1sum, 
+            #                                    new_sha1sums[relpath]))
+            #             index_path = os.path.join(hg_path, relpath)
+            #             if not os.path.exists(os.path.dirname(index_path)):
+            #                 os.makedirs(os.path.dirname(index_path))
+            #             with open(index_path, "wb") as fh:
+            #                 fh.write(index_data)
+            #         done.add(relpath)
+            #         child_sha1sums = get_release_sha1sums(index_data)
+            #         for relpath2 in sorted(child_sha1sums):
+            #             relpath3 = posixpath.join(
+            #                 posixpath.dirname(relpath), relpath2)
+            #             new_sha1sums[relpath3] = child_sha1sums[relpath2]
             for relpath in old_sha1sums:
                 if relpath in new_sha1sums:
                     continue
