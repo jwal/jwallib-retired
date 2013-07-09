@@ -15,7 +15,6 @@ from cStringIO import StringIO
 from jwalutil import mkdtemp
 from jwalutil import get1
 from jwalutil import read_file
-from jwalutil import write_file
 from jwalutil import read_lines
 from jwalutil import group_by
 from jwalutil import trim
@@ -36,7 +35,8 @@ def parse_control_file(data):
     result = []
     with mkdtemp() as temp_dir:
         meta_path = os.path.join(temp_dir, "data.txt")
-        write_file(meta_path, data)
+        with open(meta_path, "wb") as fh:
+            fh.write(data)
         tags = apt_pkg.TagFile(meta_path)
         r = tags.step()
         while r:
@@ -140,23 +140,73 @@ def ubuntu_to_hg(hg_path, username):
             if not is_supported and not is_development:
                 continue
             ok_branches.add(branch)
+            done = set()
             if branch not in branches:
                 hg(["update", "--clean", "--rev", "00"])
                 hg(["branch", "--force", branch])
             else:
                 hg(["update", "--clean", branch])
             hg(["--config", "extensions.purge=", "purge", "--all"])
+            release_gpg_path = os.path.join(hg_path, "Release.gpg")
             release_path = os.path.join(hg_path, "Release")
             old_sha1sums = {}
-            if os.path.exists(release_path):
-                old_sha1sums = get_release_sha1sums(read_file(release_path))
-            release_data = get(release["Release-File"]).content
-            new_sha1sums = get_release_sha1sums(release_data)
-            write_file(release_path, release_data)
             release_gpg_data = get(release["Release-File"] + ".gpg").content
-            release_gpg_path = os.path.join(hg_path, "Release.gpg")
-            write_file(release_gpg_path, release_gpg_data)
+            if os.path.exists(release_gpg_path):
+                if release_gpg_data == read_file(release_gpg_path):
+                    continue
+                release_data = read_file(release_path)
+                old_sha1sums = get_release_sha1sums(release_data)
+                old_sha1sums["Release"] = hashlib.sha1(
+                    release_data).hexdigest()
+                old_sha1sums["Release.gpg"] = hashlib.sha1(
+                    release_gpg_data).hexdigest()
+                for relpath in sorted(old_sha1sums):
+                    if posixpath.dirname(relpath) == "Index":
+                        index_data = read_file(os.path.join(hg_path, relpath))
+                        child_sha1sums = get_release_sha1sums(index_data)
+                        for relpath2 in sorted(child_sha1sums):
+                            relpath3 = posixpath.join(
+                                posixpath.dirname(relpath), relpath2)
+                            old_sha1sums[relpath3] = child_sha1sums[relpath2]
+            release_data = get(release["Release-File"]).content
+            with open(release_gpg_path, "wb") as fh:
+                fh.write(release_gpg_data)
+            done.add("Release")
+            with open(release_path, "wb") as fh:
+                fh.write(release_data)
+            done.add("Release.gpg")
             gpg(["--verify", release_gpg_path, release_path])
+            new_sha1sums = get_release_sha1sums(release_data)
+            new_sha1sums["Release.gpg"] = hashlib.sha1(
+                release_gpg_data).hexdigest()
+            new_sha1sums["Release"] = hashlib.sha1(
+                release_data).hexdigest()
+            for relpath in sorted(new_sha1sums):
+                if posixpath.basename(relpath) == "Index":
+                    if new_sha1sums[relpath] == old_sha1sums.get(relpath):
+                        index_data = read_file(os.path.join(hg_path, relpath))
+                    else:
+                        index_data = get(
+                            posixpath.join(
+                                posixpath.dirname(release["Release-File"]),
+                                relpath)).content
+                        sha1sum = hashlib.sha1(index_data).hexdigest()
+                        if sha1sum != new_sha1sums[relpath]:
+                            raise Exception("sha1sum mismatch for %r: "
+                                            "got %s expecting %s"
+                                            % (url, sha1sum, 
+                                               new_sha1sums[relpath]))
+                        index_path = os.path.join(hg_path, relpath)
+                        if not os.path.exists(os.path.dirname(index_path)):
+                            os.makedirs(os.path.dirname(index_path))
+                        with open(index_path, "wb") as fh:
+                            fh.write(index_data)
+                    done.add(relpath)
+                    child_sha1sums = get_release_sha1sums(index_data)
+                    for relpath2 in sorted(child_sha1sums):
+                        relpath3 = posixpath.join(
+                            posixpath.dirname(relpath), relpath2)
+                        new_sha1sums[relpath3] = child_sha1sums[relpath2]
             for relpath in old_sha1sums:
                 if relpath in new_sha1sums:
                     continue
@@ -171,6 +221,8 @@ def ubuntu_to_hg(hg_path, username):
                     continue
                 if (relpath.endswith(".bz2") 
                         and trim(relpath, suffix=".bz2") in new_sha1sums):
+                    continue
+                if relpath in done:
                     continue
                 file_path = os.path.join(hg_path, relpath)
                 file_data = get_release_file(
