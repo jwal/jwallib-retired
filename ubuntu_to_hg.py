@@ -109,7 +109,7 @@ def get_release_sha1sums(release_data):
         sha1sums[relpath] = sha1sum
     return sha1sums
 
-def ubuntu_to_hg(hg_path, username):
+def ubuntu_to_hg(hg_path, username, do_development=False):
 
     def hg(argv, **kwargs):
         kwargs.setdefault("cwd", hg_path)
@@ -140,6 +140,8 @@ def ubuntu_to_hg(hg_path, username):
             if not is_supported and not is_development:
                 continue
             ok_branches.add(branch)
+            if is_development and not do_development:
+                continue
             done = set()
             if branch not in branches:
                 hg(["update", "--clean", "--rev", "00"])
@@ -251,11 +253,14 @@ def main(argv):
     parser = optparse.OptionParser(__doc__)
     parser.add_option("--hg", dest="hg_path", default="ubuntuhg")
     parser.add_option("--username", dest="username")
+    parser.add_option("--development", dest="do_development",
+                      action="store_const", const=True, default=False)
     options, args = parser.parse_args(argv)
     if len(args) > 0:
         parser.error("Unexpected: %r" % (args,))
     hg_path = os.path.abspath(options.hg_path)
-    ubuntu_to_hg(hg_path, username=options.username)
+    ubuntu_to_hg(hg_path, username=options.username,
+                 do_development=options.do_development)
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))
