@@ -32,16 +32,14 @@ PORTS_MIRRORS = (
 )
 
 def parse_control_file(data):
+    from mimetools import Message
+    data = StringIO(data)
     result = []
-    with mkdtemp() as temp_dir:
-        meta_path = os.path.join(temp_dir, "data.txt")
-        with open(meta_path, "wb") as fh:
-            fh.write(data)
-        tags = apt_pkg.TagFile(meta_path)
-        r = tags.step()
-        while r:
-            result.append(dict(tags.section))
-            r = tags.step()
+    while True:
+        headers = Message(data)
+        if len(headers) == 0:
+            break
+        result.append(dict(headers))
     return result
 
 def get(*args, **kwargs):
@@ -104,7 +102,7 @@ def with_ubuntu_keyring():
 def get_release_sha1sums(release_data):
     sha1sums = {}
     release = get1(parse_control_file(release_data))
-    for line in read_lines(release["SHA1"] + "\n"):
+    for line in read_lines(release["sha1"] + "\n"):
         sha1sum, size, relpath = line.split()
         sha1sums[relpath] = sha1sum
     return sha1sums
@@ -123,7 +121,7 @@ def ubuntu_to_hg(hg_path, username, do_development=False):
         meta_release_data = get(
             join(BASE_URL, "meta-release-development")).content
         meta_release = parse_control_file(meta_release_data)
-        group_by(meta_release, lambda r: r["Dist"])
+        group_by(meta_release, lambda r: r["dist"])
         if not os.path.exists(hg_path):
             os.makedirs(hg_path)
             hg(["init"])
@@ -131,9 +129,9 @@ def ubuntu_to_hg(hg_path, username, do_development=False):
         ok_branches = set()
         seen_supported_non_lts = False
         for release in meta_release:
-            branch = "ubuntu_codename_%s" % (release["Dist"],)
-            is_lts = "LTS" in release["Version"]
-            is_supported = release["Supported"] == "1"
+            branch = "ubuntu_codename_%s" % (release["dist"],)
+            is_lts = "LTS" in release["version"]
+            is_supported = release["supported"] == "1"
             if is_supported and not is_lts:
                 seen_supported_non_lts = True
             is_development = not is_supported and seen_supported_non_lts
@@ -152,7 +150,7 @@ def ubuntu_to_hg(hg_path, username, do_development=False):
             release_gpg_path = os.path.join(hg_path, "Release.gpg")
             release_path = os.path.join(hg_path, "Release")
             old_sha1sums = {}
-            release_gpg_data = get(release["Release-File"] + ".gpg").content
+            release_gpg_data = get(release["release-file"] + ".gpg").content
             if os.path.exists(release_gpg_path):
                 if release_gpg_data == read_file(release_gpg_path):
                     continue
@@ -170,7 +168,7 @@ def ubuntu_to_hg(hg_path, username, do_development=False):
                 #             relpath3 = posixpath.join(
                 #                 posixpath.dirname(relpath), relpath2)
                 #             old_sha1sums[relpath3] = child_sha1sums[relpath2]
-            release_data = get(release["Release-File"]).content
+            release_data = get(release["release-file"]).content
             with open(release_gpg_path, "wb") as fh:
                 fh.write(release_gpg_data)
             done.add("Release")
@@ -229,7 +227,7 @@ def ubuntu_to_hg(hg_path, username, do_development=False):
                 file_path = os.path.join(hg_path, relpath)
                 file_data = get_release_file(
                     posixpath.join(
-                        posixpath.dirname(release["Release-File"]), relpath))
+                        posixpath.dirname(release["release-file"]), relpath))
                 sha1sum = hashlib.sha1(file_data).hexdigest()
                 if sha1sum != new_sha1sums[relpath]:
                     raise Exception("sha1sum mismatch for %r: "
