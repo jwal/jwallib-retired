@@ -10,7 +10,6 @@ import sys
 from posixpath import join
 import posixpath
 import email
-import apt_pkg
 from cStringIO import StringIO
 from jwalutil import mkdtemp
 from jwalutil import get1
