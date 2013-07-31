@@ -63,6 +63,10 @@ def read_file(path):
     with open(path, "rb") as fh:
         return fh.read().decode("utf-8")
 
+def write_file(path, data):
+    with open(path, "wb") as fh:
+        return fh.write(data.encode("utf-8"))
+
 ### Read lines
 #
 # Most well-bahaved command line programs emit their output as a
@@ -76,7 +80,11 @@ def read_file(path):
 # U+000A to be consistent with Internet standards such as HTTP.  In
 # practise many invocations of this will need to override the line
 # terminator to be `\n`.
-def read_lines(data, line_terminator="\r\n"):
+def read_lines(data, line_terminator=None):
+    if "\r\n" in data:
+        line_terminator = "\r\n"
+    else:
+        line_terminator = "\n"
     result = []
     i = 0
     while True:
